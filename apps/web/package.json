@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/start.mjs",
+    "dev": "vite --host 0.0.0.0",
+    "start": "node scripts/start.mjs",
     "build": "tsc -b && vite build",
     "lint": "tsc -b",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
