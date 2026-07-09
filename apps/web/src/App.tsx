@@ -32,6 +32,12 @@ function AppRoutes() {
         <Routes>
           <Route
             element={
+              <Navigate replace to={canViewDashboard ? "/dashboard" : "/connect-facebook"} />
+            }
+            path="/"
+          />
+          <Route
+            element={
               canViewDashboard ? (
                 <DashboardPage
                   onDeleteData={clearFacebookSession}
@@ -43,7 +49,7 @@ function AppRoutes() {
                 <Navigate replace to="/connect-facebook" />
               )
             }
-            path="/"
+            path="/dashboard"
           />
           <Route
             element={

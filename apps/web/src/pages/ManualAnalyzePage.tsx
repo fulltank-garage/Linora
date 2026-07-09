@@ -32,7 +32,7 @@ export function ManualAnalyzePage({ onReport }: ManualAnalyzePageProps) {
     try {
       const report = await runManualAnalysis(form);
       onReport(report);
-      navigate("/");
+      navigate("/dashboard");
     } catch {
       setError("วิเคราะห์ไม่สำเร็จ กรุณาตรวจข้อมูลและลองใหม่อีกครั้ง");
     } finally {

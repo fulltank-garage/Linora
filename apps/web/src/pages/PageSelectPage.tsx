@@ -24,7 +24,7 @@ export function PageSelectPage({
   function handleAuthorize() {
     if (!selectedPage || !hasConfirmedPermission) return;
     onAuthorize();
-    navigate("/");
+    navigate("/dashboard");
   }
 
   return (
