@@ -1,0 +1,13 @@
+node_modules/
+.pnpm-store/
+dist/
+build/
+.env
+.env.local
+.codex/qa/
+*.log
+*.tsbuildinfo
+apps/api/server.exe
+apps/api/server
+apps/api/tmp/
+.DS_Store

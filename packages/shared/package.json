@@ -1,0 +1,15 @@
+{
+  "name": "@linora/shared",
+  "private": true,
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\""
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

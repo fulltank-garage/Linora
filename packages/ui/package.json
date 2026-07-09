@@ -1,0 +1,30 @@
+{
+  "name": "@linora/ui",
+  "private": true,
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.2.0",
+    "@mui/material": "^9.2.0",
+    "@mui/material-pigment-css": "^9.2.0"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "typescript": "^7.0.2"
+  }
+}

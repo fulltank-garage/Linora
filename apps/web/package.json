@@ -1,0 +1,36 @@
+{
+  "name": "@linora/web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "lint": "tsc -b",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@line/liff": "^2.29.1",
+    "@linora/shared": "workspace:*",
+    "@linora/ui": "workspace:*",
+    "@mui/icons-material": "^9.2.0",
+    "@mui/material": "^9.2.0",
+    "@mui/material-pigment-css": "^9.2.0",
+    "axios": "^1.18.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1"
+  },
+  "devDependencies": {
+    "@rolldown/plugin-babel": "^0.2.3",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.4"
+  }
+}

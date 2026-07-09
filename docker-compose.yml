@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: linora-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: linora
+      POSTGRES_PASSWORD: linora
+      POSTGRES_DB: linora
+    ports:
+      - "5432:5432"
+    volumes:
+      - linora_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  linora_postgres_data:
