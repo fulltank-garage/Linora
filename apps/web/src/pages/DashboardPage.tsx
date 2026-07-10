@@ -508,6 +508,7 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
           boxShadow: "none",
           left: 0,
           p: 2,
+          pb: "calc(16px + env(safe-area-inset-bottom, 0px))",
           pt: 2.5,
           position: "fixed",
           right: 0,

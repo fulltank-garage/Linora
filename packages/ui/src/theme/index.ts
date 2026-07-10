@@ -48,9 +48,19 @@ export const linoraTheme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        html: {
+          backgroundColor: linoraColors.ivory,
+          minHeight: "100%",
+        },
         body: {
+          backgroundColor: linoraColors.ivory,
           fontFamily:
             "Inter, 'Noto Sans Thai', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          minHeight: "100dvh",
+        },
+        "#root": {
+          backgroundColor: linoraColors.ivory,
+          minHeight: "100dvh",
         },
       },
     },
