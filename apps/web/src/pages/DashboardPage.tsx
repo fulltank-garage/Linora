@@ -1,4 +1,5 @@
-import { Box, Button, Card, CardContent, Chip, CircularProgress, Stack, Typography } from "@mui/material";
+import { useState } from "react";
+import { Box, Button, Card, CardContent, Chip, CircularProgress, Drawer, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import {
   AccessTime,
   AdsClick,
@@ -10,6 +11,7 @@ import {
   Facebook,
   LinkOff,
   SecurityOutlined,
+  SettingsOutlined,
   ThumbUpOutlined,
   VisibilityOutlined,
   WorkspacePremium,
@@ -33,6 +35,7 @@ function getHealthLabel(score: number) {
 }
 
 export function DashboardPage({ onDeleteData, onDisconnect, page, report }: DashboardPageProps) {
+  const [isManagementOpen, setIsManagementOpen] = useState(false);
   const healthLabel = getHealthLabel(report.healthScore);
   const bestPostingTime = report.bestPostingTimes[0] ?? "19:00";
   const importantComment = report.importantComments[0];
@@ -120,7 +123,7 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
                 sx={{
                   alignItems: "center",
                   bgcolor: "rgba(24, 119, 242, 0.08)",
-                  borderRadius: 2,
+                  borderRadius: 0.5,
                   display: "flex",
                   gap: 1,
                   px: 1.5,
@@ -129,22 +132,9 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
               >
                 <SecurityOutlined sx={{ color: "#1877F2", flexShrink: 0, fontSize: 21 }} />
                 <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.45 }}>
-                  ข้อมูลจาก Facebook Page ที่เลือกเท่านั้น ไม่แสดง access token และไม่โพสต์อัตโนมัติ
+                  Linora ใช้ข้อมูลจากเพจที่เลือกเท่านั้น และจะไม่โพสต์แทนคุณโดยอัตโนมัติ
                 </Typography>
               </Box>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-            <Stack spacing={1}>
-              <Typography color="text.primary" sx={{ fontSize: 15, fontWeight: 900 }}>
-                โหมดทดลองก่อน Meta App Review
-              </Typography>
-              <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
-                หน้านี้แสดงข้อมูลตัวอย่างเพื่อสาธิต flow การใช้งาน หลัง App Review ผ่าน Linora จะดึงข้อมูลจริงจาก Graph API ตาม permission ที่ได้รับอนุญาต
-              </Typography>
             </Stack>
           </CardContent>
         </Card>
@@ -258,7 +248,7 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
               <Box
                 sx={{
                   bgcolor: "rgba(217, 166, 42, 0.1)",
-                  borderRadius: 2,
+                  borderRadius: 0.5,
                   px: 1.5,
                   py: 1.25,
                 }}
@@ -458,7 +448,7 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
               <Box
                 sx={{
                   bgcolor: "rgba(15, 148, 117, 0.07)",
-                  borderRadius: 2,
+                  borderRadius: 0.5,
                   px: 1.5,
                   py: 1.25,
                 }}
@@ -471,40 +461,6 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-            <Stack spacing={1.25}>
-              <Typography color="text.secondary" sx={{ fontSize: 13, fontWeight: 800 }}>
-                การจัดการข้อมูลและสิทธิ์
-              </Typography>
-              <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
-                คุณสามารถยกเลิกการเชื่อมต่อหรือลบข้อมูล Linora ได้ทุกเมื่อ การลบข้อมูลในเดโมนี้จะล้าง Page และสถานะอนุญาตจาก session ปัจจุบัน
-              </Typography>
-              <Stack spacing={1}>
-                <Button
-                  fullWidth
-                  onClick={onDisconnect}
-                  startIcon={<LinkOff />}
-                  sx={{
-                    borderColor: "#1877F2",
-                    color: "#1877F2",
-                    "&:hover": {
-                      bgcolor: "rgba(24, 119, 242, 0.08)",
-                      borderColor: "#1877F2",
-                    },
-                  }}
-                  variant="outlined"
-                >
-                  ยกเลิกการเชื่อมต่อ Facebook
-                </Button>
-                <Button color="error" fullWidth onClick={onDeleteData} startIcon={<DeleteOutlined />} variant="contained">
-                  ลบข้อมูล Linora
-                </Button>
-              </Stack>
-              <ComplianceLinks />
-            </Stack>
-          </CardContent>
-        </Card>
       </Stack>
       <Box
         sx={{
@@ -538,27 +494,104 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
           >
             เริ่มวิเคราะห์เพจ
           </Button>
-          <Button
-            component={Link}
-            fullWidth
-            size="large"
-            startIcon={<Facebook />}
-            sx={{
-              bgcolor: "rgba(255, 255, 255, 0.42)",
-              borderColor: "#1877F2",
-              color: "#1877F2",
-              "&:hover": {
-                bgcolor: "rgba(24, 119, 242, 0.08)",
+          <Stack direction="row" spacing={1}>
+            <Button
+              component={Link}
+              fullWidth
+              size="large"
+              startIcon={<Facebook />}
+              sx={{
+                bgcolor: "rgba(255, 255, 255, 0.42)",
                 borderColor: "#1877F2",
-              },
-            }}
-            to="/pages"
-            variant="outlined"
-          >
-            เปลี่ยน Facebook Page
-          </Button>
+                color: "#1877F2",
+                "&:hover": {
+                  bgcolor: "rgba(24, 119, 242, 0.08)",
+                  borderColor: "#1877F2",
+                },
+              }}
+              to="/pages"
+              variant="outlined"
+            >
+              เปลี่ยนเพจ Facebook
+            </Button>
+            <Tooltip title="จัดการข้อมูลและสิทธิ์">
+              <IconButton
+                aria-label="จัดการข้อมูลและสิทธิ์"
+                onClick={() => setIsManagementOpen(true)}
+                sx={{
+                  border: "1px solid",
+                  borderColor: "#1877F2",
+                  borderRadius: 1,
+                  color: "#1877F2",
+                  flex: "0 0 52px",
+                  height: 52,
+                  width: 52,
+                  "&:hover": { bgcolor: "rgba(24, 119, 242, 0.08)" },
+                }}
+              >
+                <SettingsOutlined />
+              </IconButton>
+            </Tooltip>
+          </Stack>
         </Stack>
       </Box>
+      <Drawer
+        anchor="bottom"
+        onClose={() => setIsManagementOpen(false)}
+        open={isManagementOpen}
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "50% 50% 0 0 / 28px 28px 0 0",
+            maxWidth: 430,
+            mx: "auto",
+            pb: "calc(12px + env(safe-area-inset-bottom, 0px))",
+            px: 2,
+              pt: 2.5,
+              width: "100%",
+            },
+          },
+        }}
+      >
+        <Box sx={{ bgcolor: "divider", borderRadius: 1, height: 4, mx: "auto", mb: 1.5, width: 40 }} />
+        <Stack spacing={1.25}>
+          <Typography align="center" color="text.primary" sx={{ fontSize: 16, fontWeight: 900 }}>
+            การจัดการข้อมูลและสิทธิ์
+          </Typography>
+          <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
+            คุณสามารถยกเลิกการเชื่อมต่อหรือลบข้อมูล Linora ได้ทุกเมื่อ การลบข้อมูลจะนำเพจที่เลือกและสิทธิ์ที่อนุญาตออกจากเบราว์เซอร์นี้
+          </Typography>
+          <Button
+            fullWidth
+            onClick={() => {
+              setIsManagementOpen(false);
+              onDisconnect();
+            }}
+            startIcon={<LinkOff />}
+            sx={{
+              borderColor: "#1877F2",
+              color: "#1877F2",
+              "&:hover": { bgcolor: "rgba(24, 119, 242, 0.08)", borderColor: "#1877F2" },
+            }}
+            variant="outlined"
+          >
+            ยกเลิกการเชื่อมต่อ Facebook
+          </Button>
+          <Button
+            color="error"
+            fullWidth
+            onClick={() => {
+              setIsManagementOpen(false);
+              onDeleteData();
+            }}
+            startIcon={<DeleteOutlined />}
+            variant="contained"
+          >
+            ลบข้อมูล Linora
+          </Button>
+          <ComplianceLinks />
+        </Stack>
+      </Drawer>
     </>
   );
 }

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Box, Paper } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
+import { Box, Paper, Typography } from "@mui/material";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { MobileAppShell } from "@linora/ui";
 import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
@@ -11,15 +11,20 @@ import { LegalPage } from "./pages/LegalPage";
 import { ManualAnalyzePage } from "./pages/ManualAnalyzePage";
 import { PageSelectPage } from "./pages/PageSelectPage";
 import { completeFacebookLogin, startFacebookLogin } from "./api/client";
+import { LoadingDots } from "./components/LoadingDots";
+
+const facebookTransitionDelay = 650;
 
 function AppRoutes() {
   const location = useLocation();
   const navigate = useNavigate();
+  const facebookHandoff = new URLSearchParams(location.search).get("facebook_connect");
   const [latestReport, setLatestReport] = useState<AnalysisReport>(demoReport);
   const [hasFacebookLogin, setHasFacebookLogin] = useState(false);
   const [facebookPages, setFacebookPages] = useState<FacebookPageSummary[]>([]);
   const [facebookLoginError, setFacebookLoginError] = useState<string | null>(null);
   const [isCompletingFacebookLogin, setIsCompletingFacebookLogin] = useState(false);
+  const completedFacebookHandoff = useRef<string | null>(null);
   const [selectedPage, setSelectedPage] = useState<FacebookPageSummary | null>(null);
   const [hasPagePermission, setHasPagePermission] = useState(false);
 
@@ -44,25 +49,61 @@ function AppRoutes() {
     }
     if (!handoffCode) return;
 
+    // React StrictMode re-runs effects in development. The server handoff is
+    // single-use, so never redeem the same OAuth result more than once.
+    if (completedFacebookHandoff.current === handoffCode) return;
+    completedFacebookHandoff.current = handoffCode;
+    const startedAt = Date.now();
+
     setIsCompletingFacebookLogin(true);
     setFacebookLoginError(null);
     void completeFacebookLogin(handoffCode)
-      .then((pages) => {
+      .then(async (pages) => {
         if (pages.length === 0) {
-          setFacebookLoginError("ไม่พบ Facebook Page ที่คุณมีสิทธิ์จัดการ");
+          setFacebookLoginError("ไม่พบเพจ Facebook ที่คุณมีสิทธิ์จัดการ");
           navigate("/connect-facebook", { replace: true });
           return;
         }
+
+        const remainingDelay = Math.max(0, facebookTransitionDelay - (Date.now() - startedAt));
+        if (remainingDelay > 0) {
+          await new Promise<void>((resolve) => window.setTimeout(resolve, remainingDelay));
+        }
+
         setFacebookPages(pages);
         setHasFacebookLogin(true);
         navigate("/pages", { replace: true });
       })
       .catch(() => {
-        setFacebookLoginError("ไม่สามารถรับข้อมูล Facebook Page ได้ กรุณาลองใหม่อีกครั้ง");
+        setFacebookLoginError("ไม่สามารถรับข้อมูลเพจ Facebook ได้ กรุณาลองใหม่อีกครั้ง");
         navigate("/connect-facebook", { replace: true });
       })
       .finally(() => setIsCompletingFacebookLogin(false));
   }, [location.search, navigate]);
+
+  if (facebookHandoff) {
+    return (
+      <MobileAppShell>
+        <Box
+          sx={{
+            alignItems: "center",
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
+            justifyContent: "center",
+            minHeight: "calc(100dvh - 150px)",
+            textAlign: "center",
+          }}
+          >
+            <LoadingDots />
+          <Typography sx={{ fontSize: 19, fontWeight: 900 }}>กรุณารอสักครู่</Typography>
+          <Typography color="text.secondary" sx={{ fontSize: 14 }}>
+            กำลังพาไปเลือกเพจ Facebook
+          </Typography>
+        </Box>
+      </MobileAppShell>
+    );
+  }
 
   return (
     <MobileAppShell>

@@ -1,11 +1,15 @@
-package analysis
+package services
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/fulltank-garage/linora/apps/api/internal/models"
+)
 
 func TestAnalyzeManualInputReturnsReport(t *testing.T) {
-	service := NewService()
+	service := NewAnalysisService()
 
-	report, err := service.AnalyzeManualInput(ManualInput{
+	report, err := service.AnalyzeManualInput(models.ManualAnalysisInput{
 		PageName:          "Linora Cafe",
 		PostContent:       "โปรโมชันเครื่องดื่มใหม่วันนี้",
 		Likes:             120,
@@ -33,9 +37,9 @@ func TestAnalyzeManualInputReturnsReport(t *testing.T) {
 }
 
 func TestAnalyzeManualInputRequiresPageName(t *testing.T) {
-	service := NewService()
+	service := NewAnalysisService()
 
-	_, err := service.AnalyzeManualInput(ManualInput{
+	_, err := service.AnalyzeManualInput(models.ManualAnalysisInput{
 		PostContent: "โพสต์ใหม่",
 	})
 
@@ -45,9 +49,9 @@ func TestAnalyzeManualInputRequiresPageName(t *testing.T) {
 }
 
 func TestAnalyzeManualInputRequiresPostContent(t *testing.T) {
-	service := NewService()
+	service := NewAnalysisService()
 
-	_, err := service.AnalyzeManualInput(ManualInput{
+	_, err := service.AnalyzeManualInput(models.ManualAnalysisInput{
 		PageName: "Linora Cafe",
 	})
 

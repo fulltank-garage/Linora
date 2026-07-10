@@ -24,7 +24,7 @@ export const demoPages: FacebookPageSummary[] = [
 export const demoReport: AnalysisReport = {
   id: "demo-report",
   pageName: "ยังไม่ได้เชื่อมต่อเพจ",
-  summary: "เริ่มต้นด้วยการเชื่อมต่อ Facebook Page หรือทดลองวิเคราะห์แบบ manual ก่อน Meta App Review ผ่าน",
+  summary: "เชื่อมต่อเพจ Facebook หรือกรอกข้อมูลโพสต์เพื่อรับคำแนะนำเบื้องต้น",
   healthScore: 72,
   topPosts: [
     {

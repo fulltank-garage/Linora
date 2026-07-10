@@ -30,21 +30,21 @@ export function PageSelectPage({
 
   return (
     <>
-      <Stack spacing={2} sx={{ pb: 11 }}>
+      <Stack spacing={2} sx={{ pb: 27 }}>
         <Stack spacing={0.5} sx={{ alignItems: "center", textAlign: "center" }}>
-          <Typography variant="h1">เลือก Facebook Page</Typography>
+          <Typography variant="h1">เลือกเพจ Facebook</Typography>
           <Typography color="text.secondary" sx={{ fontSize: 15, lineHeight: 1.45 }}>
-            เลือก Page ที่ต้องการให้ Linora วิเคราะห์เป็นค่าเริ่มต้น
+            เลือกเพจที่ต้องการให้ Linora วิเคราะห์
           </Typography>
         </Stack>
         <Card>
           <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
             <Stack spacing={1}>
               <Typography color="text.primary" sx={{ fontSize: 15, fontWeight: 900 }}>
-                ใช้ข้อมูลเฉพาะ Page ที่คุณเลือก
+                ใช้ข้อมูลเฉพาะเพจที่คุณเลือก
               </Typography>
               <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
-                Linora จะอ่านข้อมูล Page, engagement และคอมเมนต์ที่จำเป็นเพื่อสร้างรายงานเท่านั้น คุณสามารถเปลี่ยน Page หรือยกเลิกการเชื่อมต่อได้ภายหลัง
+                Linora จะใช้ข้อมูลเพจ การมีส่วนร่วม และความคิดเห็นที่จำเป็นเพื่อจัดทำรายงานเท่านั้น คุณสามารถเปลี่ยนเพจหรือยกเลิกการเชื่อมต่อได้ภายหลัง
               </Typography>
             </Stack>
           </CardContent>
@@ -97,32 +97,6 @@ export function PageSelectPage({
             }
           />
         ))}
-        <Card>
-          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-            <Stack spacing={1.25}>
-              <Typography color="text.primary" sx={{ fontSize: 15, fontWeight: 900 }}>
-                ยืนยันก่อนอนุญาต
-              </Typography>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={hasConfirmedPermission}
-                    onChange={(event) => setHasConfirmedPermission(event.target.checked)}
-                  />
-                }
-                label={
-                  <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.45 }}>
-                    ฉันเป็นผู้ดูแลหรือมีสิทธิ์จัดการ Page นี้ และอนุญาตให้ Linora วิเคราะห์ข้อมูล Page ที่เลือก
-                  </Typography>
-                }
-                sx={{ alignItems: "flex-start", m: 0 }}
-              />
-              <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.5 }}>
-                Linora จะไม่โพสต์ ตอบกลับ หรือแก้ไข Page ที่เลือกโดยอัตโนมัติ
-              </Typography>
-            </Stack>
-          </CardContent>
-        </Card>
         <ComplianceLinks />
       </Stack>
       <Box
@@ -146,7 +120,33 @@ export function PageSelectPage({
           zIndex: 20,
         }}
       >
-        <Box sx={{ maxWidth: 430, mx: "auto" }}>
+        <Stack spacing={1} sx={{ maxWidth: 430, mx: "auto" }}>
+          <Card>
+            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+              <Stack spacing={1.25}>
+                <Typography color="text.primary" sx={{ fontSize: 15, fontWeight: 900 }}>
+                  ยืนยันก่อนอนุญาต
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={hasConfirmedPermission}
+                      onChange={(event) => setHasConfirmedPermission(event.target.checked)}
+                    />
+                  }
+                  label={
+                    <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.45 }}>
+                      ฉันเป็นผู้ดูแลหรือมีสิทธิ์จัดการเพจนี้ และอนุญาตให้ Linora วิเคราะห์ข้อมูลของเพจที่เลือก
+                    </Typography>
+                  }
+                  sx={{ alignItems: "flex-start", m: 0 }}
+                />
+                <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.5 }}>
+                  Linora จะไม่โพสต์ ตอบกลับ หรือแก้ไขเพจที่เลือกโดยอัตโนมัติ
+                </Typography>
+              </Stack>
+            </CardContent>
+          </Card>
           <Button
             disabled={!selectedPage || !hasConfirmedPermission}
             fullWidth
@@ -155,9 +155,9 @@ export function PageSelectPage({
             startIcon={<ShieldOutlined />}
             variant="contained"
           >
-            อนุญาตและเข้าสู่ Dashboard
+            อนุญาตและเข้าสู่หน้าวิเคราะห์
           </Button>
-        </Box>
+        </Stack>
       </Box>
     </>
   );

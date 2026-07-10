@@ -1,0 +1,42 @@
+package routes
+
+import (
+	"bytes"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/fulltank-garage/linora/apps/api/internal/config"
+	"github.com/fulltank-garage/linora/apps/api/internal/services"
+)
+
+func newTestRouter() http.Handler {
+	cfg := config.Config{Port: "8080"}
+	return NewRouter(cfg, services.NewAnalysisService(), services.NewFacebookService(cfg.Facebook))
+}
+
+func TestHealthRoute(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	newTestRouter().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/health", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
+	}
+}
+
+func TestManualAnalysisRoute(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/api/analysis/manual", bytes.NewBufferString(`{"pageName":"Linora Cafe","postContent":"โปรโมชัน","likes":80}`))
+	request.Header.Set("Content-Type", "application/json")
+	newTestRouter().ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
+	}
+}
+
+func TestFacebookLoginRequiresConfiguration(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	newTestRouter().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/facebook/login", nil))
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusServiceUnavailable)
+	}
+}
