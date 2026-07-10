@@ -46,9 +46,9 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
     { day: "อา.", value: 58 },
   ];
   const latestReportMetrics = [
-    { icon: <VisibilityOutlined />, label: "การเข้าถึง", value: "128,450", change: "12%" },
-    { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: "12,876", change: "15%" },
-    { icon: <AdsClick />, label: "คลิกทั้งหมด", value: "3,245", change: "9%" },
+    { icon: <VisibilityOutlined />, label: "การเข้าถึง", value: "128,450", change: 12 },
+    { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: "12,876", change: 15 },
+    { icon: <AdsClick />, label: "คลิกทั้งหมด", value: "3,245", change: 9 },
   ];
 
   return (
@@ -414,8 +414,16 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
                     <Typography color="text.primary" sx={{ fontSize: 17, fontWeight: 900 }}>
                       {metric.value}
                     </Typography>
-                    <Typography color="primary.main" sx={{ fontSize: 13, fontWeight: 900 }}>
-                      ▲ {metric.change}
+                    <Typography
+                      sx={{
+                        color: metric.change > 0 ? "#0F8B6D" : metric.change < 0 ? "#E53935" : "text.secondary",
+                        fontSize: 13,
+                        fontWeight: 900,
+                      }}
+                    >
+                      {metric.change === 0
+                        ? "— 0%"
+                        : `${metric.change > 0 ? "▲" : "▼"} ${Math.abs(metric.change)}%`}
                     </Typography>
                   </Box>
                 ))}
@@ -507,9 +515,9 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
           bottom: 0,
           boxShadow: "none",
           left: 0,
-          p: 2,
-          pb: "calc(16px + env(safe-area-inset-bottom, 0px))",
-          pt: 2.5,
+          pb: "calc(8px + env(safe-area-inset-bottom, 0px))",
+          pt: 0.75,
+          px: 2,
           position: "fixed",
           right: 0,
           transform: "translate3d(0, 0, 0)",
@@ -519,7 +527,7 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
           zIndex: 20,
         }}
       >
-        <Stack spacing={1.25} sx={{ maxWidth: 430, mx: "auto" }}>
+        <Stack spacing={1} sx={{ maxWidth: 430, mx: "auto" }}>
           <Button
             component={Link}
             fullWidth
