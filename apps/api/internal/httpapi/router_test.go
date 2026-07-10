@@ -80,3 +80,15 @@ func TestManualAnalysisRouteAllowsLocalDevCors(t *testing.T) {
 		t.Fatalf("Access-Control-Allow-Origin = %q, want http://localhost:5173", got)
 	}
 }
+
+func TestFacebookLoginRequiresConfiguration(t *testing.T) {
+	router := NewRouter(analysis.NewService())
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/api/facebook/login", nil)
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusServiceUnavailable)
+	}
+}

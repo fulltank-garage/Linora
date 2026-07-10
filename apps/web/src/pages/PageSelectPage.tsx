@@ -3,12 +3,12 @@ import { Box, Button, Card, CardContent, Checkbox, FormControlLabel, Stack, Typo
 import { CheckCircle, Facebook, RadioButtonUnchecked, ShieldOutlined } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import type { FacebookPageSummary } from "@linora/shared";
-import { demoPages } from "../data/demo";
 import { InsightCard } from "@linora/ui";
 import { ComplianceLinks } from "../components/ComplianceLinks";
 
 type PageSelectPageProps = {
   selectedPage: FacebookPageSummary | null;
+  pages: FacebookPageSummary[];
   onSelectPage: (page: FacebookPageSummary) => void;
   onAuthorize: () => void;
 };
@@ -17,6 +17,7 @@ export function PageSelectPage({
   selectedPage,
   onSelectPage,
   onAuthorize,
+  pages,
 }: PageSelectPageProps) {
   const navigate = useNavigate();
   const [hasConfirmedPermission, setHasConfirmedPermission] = useState(false);
@@ -48,7 +49,7 @@ export function PageSelectPage({
             </Stack>
           </CardContent>
         </Card>
-        {demoPages.map((page) => (
+        {pages.map((page) => (
           <InsightCard
             action={
               <Button

@@ -7,11 +7,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(analysisService *analysis.Service) *gin.Engine {
+func NewRouter(analysisService *analysis.Service, facebookConfigs ...FacebookConfig) *gin.Engine {
+	facebookConfig := FacebookConfig{}
+	if len(facebookConfigs) > 0 {
+		facebookConfig = facebookConfigs[0]
+	}
+	facebook := newFacebookOAuth(facebookConfig)
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.Use(localDevCors())
+	router.Use(localDevCors(facebookConfig.AppURL))
 
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -35,14 +40,20 @@ func NewRouter(analysisService *analysis.Service) *gin.Engine {
 
 		c.JSON(http.StatusOK, gin.H{"report": report})
 	})
+	router.GET("/api/facebook/login", facebook.begin)
+	router.GET("/api/facebook/callback", facebook.callback)
+	router.GET("/api/facebook/session", facebook.handoff)
 
 	return router
 }
 
-func localDevCors() gin.HandlerFunc {
+func localDevCors(appURL string) gin.HandlerFunc {
 	allowedOrigins := map[string]bool{
 		"http://localhost:5173": true,
 		"http://127.0.0.1:5173": true,
+	}
+	if appURL != "" {
+		allowedOrigins[appURL] = true
 	}
 
 	return func(c *gin.Context) {

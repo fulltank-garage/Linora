@@ -1,22 +1,29 @@
-import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
 import { CheckCircle, Facebook } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { ComplianceLinks } from "../components/ComplianceLinks";
 
 type ConnectFacebookPageProps = {
   hasFacebookLogin: boolean;
+  isLoading?: boolean;
+  loginError?: string | null;
   onLogin: () => void;
 };
 
 export function ConnectFacebookPage({
   hasFacebookLogin,
+  isLoading = false,
+  loginError,
   onLogin,
 }: ConnectFacebookPageProps) {
   const navigate = useNavigate();
 
   function handleLogin() {
+    if (hasFacebookLogin) {
+      navigate("/pages");
+      return;
+    }
     onLogin();
-    navigate("/pages");
   }
 
   return (
@@ -54,7 +61,9 @@ export function ConnectFacebookPage({
             เริ่มวิเคราะห์ Facebook Page ของคุณได้ในไม่กี่ขั้นตอน
           </Typography>
         </Stack>
+        {loginError ? <Alert severity="error">{loginError}</Alert> : null}
         <Button
+          disabled={isLoading}
           onClick={handleLogin}
           size="large"
           startIcon={hasFacebookLogin ? <CheckCircle /> : <Facebook />}
@@ -71,7 +80,7 @@ export function ConnectFacebookPage({
           }}
           variant="contained"
         >
-          {hasFacebookLogin ? "ไปเลือก Page" : "เข้าสู่ระบบด้วย Facebook"}
+          {isLoading ? "กำลังเชื่อมต่อ Facebook" : hasFacebookLogin ? "ไปเลือก Page" : "เข้าสู่ระบบด้วย Facebook"}
         </Button>
       </Stack>
       <Stack spacing={1.25} sx={{ flex: "0 0 auto", width: "100%" }}>
