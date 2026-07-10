@@ -46,6 +46,7 @@ export function ConnectFacebookPage({
           flex: "1 1 auto",
           justifyContent: "center",
           minHeight: 0,
+          transform: "translateY(-28px)",
           width: "100%",
         }}
       >
