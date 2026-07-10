@@ -138,6 +138,9 @@ export function PageSelectPage({
           pt: 2.5,
           position: "fixed",
           right: 0,
+          transform: "translate3d(0, 0, 0)",
+          WebkitTransform: "translate3d(0, 0, 0)",
+          willChange: "transform",
           WebkitBackdropFilter: "blur(18px)",
           zIndex: 20,
         }}

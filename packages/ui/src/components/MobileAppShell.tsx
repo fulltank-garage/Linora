@@ -11,7 +11,7 @@ export function MobileAppShell({
   children,
 }: MobileAppShellProps) {
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+    <Box sx={{ bgcolor: "background.default", minHeight: "100dvh", overscrollBehaviorY: "none" }}>
       <AppBar
         color="inherit"
         elevation={0}
@@ -25,6 +25,9 @@ export function MobileAppShell({
           position: "fixed",
           right: 0,
           top: 0,
+          transform: "translate3d(0, 0, 0)",
+          WebkitTransform: "translate3d(0, 0, 0)",
+          willChange: "transform",
           zIndex: (theme) => theme.zIndex.appBar,
           "&::after": {
             backdropFilter: "blur(18px)",
@@ -36,7 +39,7 @@ export function MobileAppShell({
             pointerEvents: "none",
             position: "absolute",
             top: -10,
-            transform: "translateX(-50%)",
+            transform: "translate3d(-50%, 0, 0)",
             width: "min(470px, 108vw)",
             WebkitBackdropFilter: "blur(18px)",
             zIndex: 0,

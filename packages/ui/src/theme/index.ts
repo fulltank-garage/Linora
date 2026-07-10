@@ -51,16 +51,19 @@ export const linoraTheme = createTheme({
         html: {
           backgroundColor: linoraColors.ivory,
           minHeight: "100%",
+          overscrollBehaviorY: "none",
         },
         body: {
           backgroundColor: linoraColors.ivory,
           fontFamily:
             "Inter, 'Noto Sans Thai', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           minHeight: "100dvh",
+          overscrollBehaviorY: "none",
         },
         "#root": {
           backgroundColor: linoraColors.ivory,
           minHeight: "100dvh",
+          overscrollBehaviorY: "none",
         },
       },
     },
