@@ -9,8 +9,9 @@
     "build": "pnpm --recursive build",
     "lint": "pnpm --recursive lint",
     "format": "pnpm --recursive format",
-    "db:up": "docker compose up -d db",
-    "db:down": "docker compose down"
+    "docker:db:up": "docker compose up -d postgres redis",
+    "docker:up:all": "docker compose up -d --build",
+    "docker:down:all": "docker compose down"
   },
   "devDependencies": {
     "typescript": "^7.0.2"

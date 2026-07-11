@@ -44,12 +44,12 @@ func TestAuthorizationURLContainsOAuthParameters(t *testing.T) {
 	if query.Get("state") != "state-token" {
 		t.Fatalf("state = %q, want state-token", query.Get("state"))
 	}
-	if query.Get("scope") != "pages_show_list,pages_read_engagement" {
+	if query.Get("scope") != "pages_show_list,pages_read_engagement,pages_read_user_content,read_insights" {
 		t.Fatalf("scope = %q", query.Get("scope"))
 	}
 }
 
-func TestCompleteLoginExchangesCodeAndReturnsPagesOnce(t *testing.T) {
+func TestCompleteLoginExchangesCodeAndConsumesSelectedPageOnce(t *testing.T) {
 	service := NewFacebookService(config.FacebookConfig{
 		AppID:        "app-id",
 		AppSecret:    "app-secret",
@@ -69,7 +69,7 @@ func TestCompleteLoginExchangesCodeAndReturnsPagesOnce(t *testing.T) {
 			if request.URL.Query().Get("access_token") != "user-access-token" {
 				t.Fatalf("access_token = %q, want user-access-token", request.URL.Query().Get("access_token"))
 			}
-			body = `{"data":[{"id":"page-1","name":"Linora Cafe","category":"Local business"},{"id":"page-2","name":"Linora Studio","category":"Creator"}]}`
+			body = `{"data":[{"id":"page-1","name":"Linora Cafe","category":"Local business","access_token":"page-token-1"},{"id":"page-2","name":"Linora Studio","category":"Creator","access_token":"page-token-2"}]}`
 		default:
 			t.Fatalf("unexpected Facebook request: %s", request.URL.String())
 		}
@@ -82,19 +82,23 @@ func TestCompleteLoginExchangesCodeAndReturnsPagesOnce(t *testing.T) {
 		}, nil
 	})}
 
-	handoff, err := service.CompleteLogin(context.Background(), "authorization-code")
+	handoff, err := service.CompleteLogin(context.Background(), "authorization-code", "line-user-1")
 	if err != nil {
 		t.Fatalf("CompleteLogin returned error: %v", err)
 	}
 
-	pages, err := service.RedeemHandoff(handoff)
+	pages, err := service.RedeemHandoff(handoff, "line-user-1")
 	if err != nil {
 		t.Fatalf("RedeemHandoff returned error: %v", err)
 	}
 	if len(pages) != 2 || pages[0].PageID != "page-1" || pages[1].PageName != "Linora Studio" {
 		t.Fatalf("pages = %#v, want Facebook page summaries", pages)
 	}
-	if _, err := service.RedeemHandoff(handoff); err == nil {
-		t.Fatal("RedeemHandoff accepted a handoff code twice")
+	page, err := service.ConsumePage(handoff, "line-user-1", "page-1")
+	if err != nil || page.AccessToken != "page-token-1" {
+		t.Fatalf("ConsumePage = %#v, %v", page, err)
+	}
+	if _, err := service.ConsumePage(handoff, "line-user-1", "page-1"); err == nil {
+		t.Fatal("ConsumePage accepted a handoff code twice")
 	}
 }

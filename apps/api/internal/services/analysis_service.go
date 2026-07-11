@@ -15,6 +15,51 @@ func NewAnalysisService() *AnalysisService {
 	return &AnalysisService{}
 }
 
+func (s *AnalysisService) AnalyzePageSnapshot(page models.FacebookPage, snapshot models.PageSnapshot) models.AnalysisReport {
+	var best models.FacebookPost
+	for _, post := range snapshot.Posts {
+		if post.Reactions+post.Comments+post.Shares > best.Reactions+best.Comments+best.Shares {
+			best = post
+		}
+	}
+	score := 45 + min(int(snapshot.Metrics.Engagements/4), 35) + min(len(snapshot.Posts)*2, 15) + min(len(snapshot.Comments)*2, 5)
+	if score > 100 {
+		score = 100
+	}
+	important := snapshot.Comments
+	if len(important) == 0 {
+		important = []models.ImportantComment{{
+			CommentID:      "none",
+			Message:        "ยังไม่พบคอมเมนต์ที่ต้องติดตามเป็นพิเศษ",
+			Reason:         "Linora จะตรวจสอบอีกครั้งเมื่อมีข้อมูลใหม่",
+			SuggestedReply: "",
+		}}
+	}
+	postReason := "ยังมีข้อมูลโพสต์ไม่เพียงพอสำหรับจัดอันดับ"
+	postRecommendation := "เผยแพร่โพสต์เพิ่มเติมและกลับมาซิงก์ข้อมูลอีกครั้งเพื่อดูแนวโน้ม"
+	if best.ID != "" {
+		postReason = fmt.Sprintf("โพสต์นี้มีปฏิสัมพันธ์รวม %d ครั้ง จึงเป็นโพสต์ที่ทำผลงานเด่นในรอบล่าสุด", best.Reactions+best.Comments+best.Shares)
+		postRecommendation = "ต่อยอดหัวข้อของโพสต์นี้ และเพิ่ม CTA ที่ชัดเจนเพื่อให้ลูกค้าทัก LINE ได้ทันที"
+	}
+	return models.AnalysisReport{
+		ID:                fmt.Sprintf("facebook-%d", time.Now().UnixNano()),
+		PageName:          page.PageName,
+		Summary:           fmt.Sprintf("วิเคราะห์จาก %d โพสต์ล่าสุด: มีปฏิสัมพันธ์ %d ครั้ง และเข้าถึงโดยประมาณ %d ครั้ง", len(snapshot.Posts), snapshot.Metrics.Engagements, snapshot.Metrics.Reach),
+		HealthScore:       score,
+		TopPosts:          []models.TopPost{{PostID: best.ID, Reason: postReason, Recommendation: postRecommendation}},
+		ImportantComments: important,
+		ContentRecommendations: []string{
+			"ต่อยอดเนื้อหาที่ผู้ติดตามมีส่วนร่วมสูง พร้อม CTA ที่ตอบได้ทันที",
+			"นำคำถามจากลูกค้ามาทำเป็นโพสต์ FAQ เพื่อลดเวลาตอบซ้ำ",
+			"ติดตามผลหลังโพสต์และเปรียบเทียบแนวโน้มทุกสัปดาห์",
+		},
+		BestPostingTimes:   []string{"18:00 - 20:00", "11:00 - 13:00"},
+		LineSummaryMessage: fmt.Sprintf("สรุปเพจ %s\nคะแนนภาพรวม %d/100\nปฏิสัมพันธ์ล่าสุด %d ครั้ง", page.PageName, score, snapshot.Metrics.Engagements),
+		Metrics:            snapshot.Metrics,
+		CreatedAt:          time.Now().Format(time.RFC3339),
+	}
+}
+
 func (s *AnalysisService) AnalyzeManualInput(input models.ManualAnalysisInput) (models.AnalysisReport, error) {
 	pageName := strings.TrimSpace(input.PageName)
 	postContent := strings.TrimSpace(input.PostContent)
@@ -49,7 +94,10 @@ func (s *AnalysisService) AnalyzeManualInput(input models.ManualAnalysisInput) (
 		},
 		BestPostingTimes:   []string{"18:00 - 20:00", "11:00 - 13:00"},
 		LineSummaryMessage: fmt.Sprintf("สรุปเพจวันนี้จาก Linora\n\nคะแนนภาพรวม: %d/100\n\nคำแนะนำ: เพิ่ม CTA ให้ชัดและตอบคอมเมนต์สำคัญให้เร็วขึ้น", score),
-		CreatedAt:          time.Now().Format(time.RFC3339),
+		Metrics: models.PageMetrics{
+			Engagements: int64(input.Likes + input.Comments + input.Shares),
+		},
+		CreatedAt: time.Now().Format(time.RFC3339),
 	}, nil
 }
 

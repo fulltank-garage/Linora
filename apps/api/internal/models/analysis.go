@@ -33,5 +33,6 @@ type AnalysisReport struct {
 	ContentRecommendations []string           `json:"contentRecommendations"`
 	BestPostingTimes       []string           `json:"bestPostingTimes"`
 	LineSummaryMessage     string             `json:"lineSummaryMessage"`
+	Metrics                PageMetrics        `json:"metrics"`
 	CreatedAt              string             `json:"createdAt"`
 }

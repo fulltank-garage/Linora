@@ -36,6 +36,13 @@ export type ImportantComment = {
   suggestedReply: string;
 };
 
+export type PageMetrics = {
+  clicks: number;
+  engagements: number;
+  impressions: number;
+  reach: number;
+};
+
 export type AnalysisReport = {
   id: string;
   pageName: string;
@@ -47,6 +54,7 @@ export type AnalysisReport = {
   bestPostingTimes: string[];
   lineSummaryMessage: string;
   createdAt: string;
+  metrics?: PageMetrics;
 };
 
 export type ManualAnalysisResponse = {

@@ -9,7 +9,7 @@ type ConnectFacebookPageProps = {
   hasFacebookLogin: boolean;
   isLoading?: boolean;
   loginError?: string | null;
-  onLogin: () => void;
+  onLogin: () => Promise<void>;
 };
 
 export function ConnectFacebookPage({
@@ -27,7 +27,9 @@ export function ConnectFacebookPage({
       return;
     }
     setIsRedirecting(true);
-    window.setTimeout(onLogin, 650);
+    window.setTimeout(() => {
+      void onLogin().catch(() => setIsRedirecting(false));
+    }, 650);
   }
 
   return (

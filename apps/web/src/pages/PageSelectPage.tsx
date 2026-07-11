@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, Button, Card, CardContent, Checkbox, FormControlLabel, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Checkbox, FormControlLabel, Stack, Typography } from "@mui/material";
 import { CheckCircle, Facebook, RadioButtonUnchecked, ShieldOutlined } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import type { FacebookPageSummary } from "@linora/shared";
@@ -10,7 +10,7 @@ type PageSelectPageProps = {
   selectedPage: FacebookPageSummary | null;
   pages: FacebookPageSummary[];
   onSelectPage: (page: FacebookPageSummary) => void;
-  onAuthorize: () => void;
+  onAuthorize: () => Promise<void>;
 };
 
 export function PageSelectPage({
@@ -21,11 +21,21 @@ export function PageSelectPage({
 }: PageSelectPageProps) {
   const navigate = useNavigate();
   const [hasConfirmedPermission, setHasConfirmedPermission] = useState(false);
+  const [isAuthorizing, setIsAuthorizing] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleAuthorize() {
+  async function handleAuthorize() {
     if (!selectedPage || !hasConfirmedPermission) return;
-    onAuthorize();
-    navigate("/dashboard");
+    setError("");
+    setIsAuthorizing(true);
+    try {
+      await onAuthorize();
+      navigate("/dashboard");
+    } catch {
+      setError("ไม่สามารถเชื่อมต่อและวิเคราะห์เพจได้ กรุณาลองอีกครั้ง");
+    } finally {
+      setIsAuthorizing(false);
+    }
   }
 
   return (
@@ -49,6 +59,7 @@ export function PageSelectPage({
             </Stack>
           </CardContent>
         </Card>
+        {error ? <Alert severity="error">{error}</Alert> : null}
         {pages.map((page) => (
           <InsightCard
             action={
@@ -148,7 +159,7 @@ export function PageSelectPage({
             </CardContent>
           </Card>
           <Button
-            disabled={!selectedPage || !hasConfirmedPermission}
+            disabled={!selectedPage || !hasConfirmedPermission || isAuthorizing}
             fullWidth
             onClick={handleAuthorize}
             size="large"

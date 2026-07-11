@@ -1,16 +1,77 @@
 services:
-  db:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ""
+    container_name: Linora.WebApp
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: Linora.API
+    restart: unless-stopped
+    env_file:
+      - ./apps/api/.env
+    environment:
+      DB_DSN: host=postgres user=linora password=linora dbname=linora port=5432 sslmode=disable TimeZone=Asia/Bangkok
+      PORT: "8080"
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  postgres:
     image: postgres:16
-    container_name: linora-db
+    container_name: Linora.PostgreSQL
     restart: unless-stopped
     environment:
       POSTGRES_USER: linora
       POSTGRES_PASSWORD: linora
       POSTGRES_DB: linora
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - linora_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linora -d linora"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: Linora.Redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - linora_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
 volumes:
   linora_postgres_data:
+  linora_redis_data:

@@ -10,8 +10,15 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { LegalPage } from "./pages/LegalPage";
 import { ManualAnalyzePage } from "./pages/ManualAnalyzePage";
 import { PageSelectPage } from "./pages/PageSelectPage";
-import { completeFacebookLogin, startFacebookLogin } from "./api/client";
+import {
+  completeFacebookLogin,
+  connectFacebookPage,
+  getConnectedFacebookPages,
+  selectConnectedFacebookPage,
+  startFacebookLogin,
+} from "./api/client";
 import { LoadingDots } from "./components/LoadingDots";
+import { initializeLineIdentity } from "./lib/line";
 
 const facebookTransitionDelay = 650;
 
@@ -23,7 +30,9 @@ function AppRoutes() {
   const [hasFacebookLogin, setHasFacebookLogin] = useState(false);
   const [facebookPages, setFacebookPages] = useState<FacebookPageSummary[]>([]);
   const [facebookLoginError, setFacebookLoginError] = useState<string | null>(null);
+  const [facebookHandoffCode, setFacebookHandoffCode] = useState<string | null>(null);
   const [isCompletingFacebookLogin, setIsCompletingFacebookLogin] = useState(false);
+  const [isLineIdentityReady, setIsLineIdentityReady] = useState(false);
   const completedFacebookHandoff = useRef<string | null>(null);
   const [selectedPage, setSelectedPage] = useState<FacebookPageSummary | null>(null);
   const [hasPagePermission, setHasPagePermission] = useState(false);
@@ -34,9 +43,31 @@ function AppRoutes() {
   function clearFacebookSession() {
     setHasFacebookLogin(false);
     setFacebookPages([]);
+    setFacebookHandoffCode(null);
     setSelectedPage(null);
     setHasPagePermission(false);
   }
+
+  useEffect(() => {
+    let isActive = true;
+    void initializeLineIdentity()
+      .then(async (ready) => {
+        if (!ready || !isActive) return;
+        const pages = await getConnectedFacebookPages();
+        if (!isActive) return;
+        setFacebookPages(pages);
+        setHasFacebookLogin(pages.length > 0);
+      })
+      .catch(() => {
+        if (isActive) clearFacebookSession();
+      })
+      .finally(() => {
+        if (isActive) setIsLineIdentityReady(true);
+      });
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -71,6 +102,7 @@ function AppRoutes() {
         }
 
         setFacebookPages(pages);
+        setFacebookHandoffCode(handoffCode);
         setHasFacebookLogin(true);
         navigate("/pages", { replace: true });
       })
@@ -80,6 +112,41 @@ function AppRoutes() {
       })
       .finally(() => setIsCompletingFacebookLogin(false));
   }, [location.search, navigate]);
+
+  async function authorizeSelectedPage() {
+    if (!selectedPage) throw new Error("Facebook page is unavailable");
+    const result = facebookHandoffCode
+      ? await connectFacebookPage(facebookHandoffCode, selectedPage.pageId)
+      : await selectConnectedFacebookPage(selectedPage.pageId);
+    setSelectedPage(result.page);
+    setLatestReport(result.report);
+    setHasPagePermission(true);
+    setFacebookHandoffCode(null);
+  }
+
+  if (!isLineIdentityReady) {
+    return (
+      <MobileAppShell>
+        <Box
+          sx={{
+            alignItems: "center",
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.5,
+            justifyContent: "center",
+            minHeight: "calc(100dvh - 150px)",
+            textAlign: "center",
+          }}
+        >
+          <LoadingDots />
+          <Typography sx={{ fontSize: 19, fontWeight: 900 }}>กรุณารอสักครู่</Typography>
+          <Typography color="text.secondary" sx={{ fontSize: 14 }}>
+            กำลังตรวจสอบการเข้าใช้งานผ่าน LINE
+          </Typography>
+        </Box>
+      </MobileAppShell>
+    );
+  }
 
   if (facebookHandoff) {
     return (
@@ -125,7 +192,7 @@ function AppRoutes() {
                   report={latestReport}
                 />
               ) : (
-                <Navigate replace to="/connect-facebook" />
+                <Navigate replace to={hasFacebookLogin ? "/pages" : "/connect-facebook"} />
               )
             }
             path="/dashboard"
@@ -145,7 +212,7 @@ function AppRoutes() {
             element={
               hasFacebookLogin ? (
                 <PageSelectPage
-                  onAuthorize={() => setHasPagePermission(true)}
+                  onAuthorize={authorizeSelectedPage}
                   onSelectPage={(page) => {
                     setSelectedPage(page);
                     setHasPagePermission(false);

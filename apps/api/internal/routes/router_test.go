@@ -11,8 +11,8 @@ import (
 )
 
 func newTestRouter() http.Handler {
-	cfg := config.Config{Port: "8080"}
-	return NewRouter(cfg, services.NewAnalysisService(), services.NewFacebookService(cfg.Facebook))
+	cfg := config.Config{Environment: "development", Port: "8080"}
+	return NewRouter(cfg, services.NewAnalysisService(), services.NewFacebookService(cfg.Facebook), nil, nil, services.NewLineIdentityService(cfg.Line))
 }
 
 func TestHealthRoute(t *testing.T) {
@@ -35,7 +35,9 @@ func TestManualAnalysisRoute(t *testing.T) {
 
 func TestFacebookLoginRequiresConfiguration(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	newTestRouter().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/facebook/login", nil))
+	request := httptest.NewRequest(http.MethodPost, "/api/facebook/login", nil)
+	request.Header.Set("X-Linora-Dev-User", "test-line-user")
+	newTestRouter().ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusServiceUnavailable)
 	}

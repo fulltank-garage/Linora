@@ -4,11 +4,10 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/fulltank-garage/linora/apps/api/internal/middleware"
 	"github.com/fulltank-garage/linora/apps/api/internal/services"
 	"github.com/gin-gonic/gin"
 )
-
-const facebookStateCookie = "linora_facebook_oauth_state"
 
 type FacebookController struct {
 	service *services.FacebookService
@@ -24,14 +23,12 @@ func (c *FacebookController) Begin(cxt *gin.Context) {
 		return
 	}
 
-	state, err := services.SecureToken()
+	authorizationURL, err := c.service.StartAuthorization(middleware.LineUserID(cxt))
 	if err != nil {
 		cxt.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเริ่ม Facebook Login ได้"})
 		return
 	}
-	cxt.SetSameSite(http.SameSiteLaxMode)
-	cxt.SetCookie(facebookStateCookie, state, int(services.FacebookHandoffLifetime.Seconds()), "/api/facebook", "", services.IsHTTPS(c.service.RedirectURI()), true)
-	cxt.Redirect(http.StatusFound, c.service.AuthorizationURL(state))
+	cxt.JSON(http.StatusOK, gin.H{"authorizationUrl": authorizationURL})
 }
 
 func (c *FacebookController) Callback(cxt *gin.Context) {
@@ -40,20 +37,17 @@ func (c *FacebookController) Callback(cxt *gin.Context) {
 		return
 	}
 
-	state, err := cxt.Cookie(facebookStateCookie)
-	if err != nil || state == "" || state != cxt.Query("state") {
+	ownerID, err := c.service.ConsumeAuthorizationState(cxt.Query("state"))
+	if err != nil || ownerID == "" {
 		c.redirectWithError(cxt, "ไม่สามารถยืนยัน Facebook Login ได้")
 		return
 	}
-	cxt.SetSameSite(http.SameSiteLaxMode)
-	cxt.SetCookie(facebookStateCookie, "", -1, "/api/facebook", "", services.IsHTTPS(c.service.RedirectURI()), true)
-
 	code := cxt.Query("code")
 	if code == "" {
 		c.redirectWithError(cxt, "Facebook ไม่ส่งรหัสยืนยันกลับมา")
 		return
 	}
-	handoff, err := c.service.CompleteLogin(cxt.Request.Context(), code)
+	handoff, err := c.service.CompleteLogin(cxt.Request.Context(), code, ownerID)
 	if err != nil {
 		c.redirectWithError(cxt, "ไม่สามารถเชื่อมต่อหรืออ่านรายการ Facebook Page ได้")
 		return
@@ -77,7 +71,7 @@ func (c *FacebookController) Session(cxt *gin.Context) {
 		cxt.JSON(http.StatusBadRequest, gin.H{"error": "ไม่พบรหัสยืนยัน Facebook Login"})
 		return
 	}
-	pages, err := c.service.RedeemHandoff(code)
+	pages, err := c.service.RedeemHandoff(code, middleware.LineUserID(cxt))
 	if err != nil {
 		cxt.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

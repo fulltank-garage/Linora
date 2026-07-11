@@ -16,7 +16,7 @@ import {
   VisibilityOutlined,
   WorkspacePremium,
 } from "@mui/icons-material";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
 import { ComplianceLinks } from "../components/ComplianceLinks";
 
@@ -34,7 +34,13 @@ function getHealthLabel(score: number) {
   return "ต้องดูแลเร่งด่วน";
 }
 
+function formatMetric(value: number | undefined) {
+  if (!value) return "-";
+  return new Intl.NumberFormat("th-TH").format(value);
+}
+
 export function DashboardPage({ onDeleteData, onDisconnect, page, report }: DashboardPageProps) {
+  const navigate = useNavigate();
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const healthLabel = getHealthLabel(report.healthScore);
   const bestPostingTime = report.bestPostingTimes[0] ?? "19:00";
@@ -49,9 +55,9 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
     { day: "อา.", value: 58 },
   ];
   const latestReportMetrics = [
-    { icon: <VisibilityOutlined />, label: "การเข้าถึง", value: "128,450", change: 12 },
-    { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: "12,876", change: 15 },
-    { icon: <AdsClick />, label: "คลิกทั้งหมด", value: "3,245", change: 9 },
+    { icon: <VisibilityOutlined />, label: "การเข้าถึง", value: formatMetric(report.metrics?.reach) },
+    { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: formatMetric(report.metrics?.engagements) },
+    { icon: <AdsClick />, label: "คลิกทั้งหมด", value: formatMetric(report.metrics?.clicks) },
   ];
 
   return (
@@ -404,16 +410,8 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
                     <Typography color="text.primary" sx={{ fontSize: 17, fontWeight: 900 }}>
                       {metric.value}
                     </Typography>
-                    <Typography
-                      sx={{
-                        color: metric.change > 0 ? "#0F8B6D" : metric.change < 0 ? "#E53935" : "text.secondary",
-                        fontSize: 13,
-                        fontWeight: 900,
-                      }}
-                    >
-                      {metric.change === 0
-                        ? "— 0%"
-                        : `${metric.change > 0 ? "▲" : "▼"} ${Math.abs(metric.change)}%`}
+                    <Typography color="text.secondary" sx={{ fontSize: 12, fontWeight: 700 }}>
+                      ล่าสุด
                     </Typography>
                   </Box>
                 ))}
@@ -496,8 +494,8 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
           </Button>
           <Stack direction="row" spacing={1}>
             <Button
-              component={Link}
               fullWidth
+              onClick={() => navigate("/pages")}
               size="large"
               startIcon={<Facebook />}
               sx={{
@@ -509,7 +507,6 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
                   borderColor: "#1877F2",
                 },
               }}
-              to="/pages"
               variant="outlined"
             >
               เปลี่ยนเพจ Facebook
@@ -541,7 +538,7 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
         open={isManagementOpen}
         slotProps={{
           paper: {
-            sx: {
+            sx: { 
               borderRadius: "50% 50% 0 0 / 28px 28px 0 0",
             maxWidth: 430,
             mx: "auto",

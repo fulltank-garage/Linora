@@ -1,0 +1,11 @@
+.git
+.github
+.agents
+.codex
+.pnpm-store
+node_modules
+**/node_modules
+**/dist
+**/.env
+**/*.tsbuildinfo
+apps/api/.go-build-cache
