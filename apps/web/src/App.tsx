@@ -70,6 +70,8 @@ function AppRoutes() {
   }, []);
 
   useEffect(() => {
+	if (!isLineIdentityReady) return;
+
     const params = new URLSearchParams(location.search);
     const loginError = params.get("facebook_error");
     const handoffCode = params.get("facebook_connect");
@@ -111,7 +113,7 @@ function AppRoutes() {
         navigate("/connect-facebook", { replace: true });
       })
       .finally(() => setIsCompletingFacebookLogin(false));
-  }, [location.search, navigate]);
+  }, [isLineIdentityReady, location.search, navigate]);
 
   async function authorizeSelectedPage() {
     if (!selectedPage) throw new Error("Facebook page is unavailable");
