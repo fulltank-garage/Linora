@@ -15,8 +15,8 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+      context: ./apps/api
+      dockerfile: Dockerfile
     container_name: Linora.API
     restart: unless-stopped
     env_file:

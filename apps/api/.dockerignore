@@ -1,0 +1,6 @@
+.env
+.env.*
+!.env.example
+.go-build-cache
+server.exe
+tmp
