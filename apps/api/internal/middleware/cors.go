@@ -19,7 +19,7 @@ func CORS(appURL string) gin.HandlerFunc {
 		origin := c.GetHeader("Origin")
 		if allowedOrigins[origin] {
 			c.Header("Access-Control-Allow-Origin", origin)
-			c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Linora-Dev-User")
 		}
 
