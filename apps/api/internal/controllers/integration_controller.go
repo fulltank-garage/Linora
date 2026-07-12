@@ -1,10 +1,13 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/fulltank-garage/linora/apps/api/internal/middleware"
 	"github.com/fulltank-garage/linora/apps/api/internal/repositories"
@@ -181,6 +184,8 @@ func (c *IntegrationController) LineWebhook(ctx *gin.Context) {
 			continue
 		}
 		text := strings.TrimSpace(event.Message.Text)
+		go c.replyToLineMessage(event.ReplyToken, event.Source.UserID, text)
+		continue
 		var answer string
 		if strings.HasPrefix(strings.ToUpper(text), "LIN-") {
 			if _, err := c.line.Link(ctx.Request.Context(), event.Source.UserID, text); err != nil {
@@ -194,4 +199,29 @@ func (c *IntegrationController) LineWebhook(ctx *gin.Context) {
 		_ = c.line.Reply(ctx.Request.Context(), event.ReplyToken, answer)
 	}
 	ctx.Status(http.StatusOK)
+}
+
+func (c *IntegrationController) replyToLineMessage(replyToken string, lineUserID string, text string) {
+	requestCtx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+
+	var answer string
+	if strings.HasPrefix(strings.ToUpper(text), "LIN-") {
+		if _, err := c.line.Link(requestCtx, lineUserID, text); err != nil {
+			answer = "รหัสเชื่อมต่อไม่ถูกต้องหรือหมดอายุแล้ว กรุณาลองใหม่อีกครั้ง"
+		} else {
+			answer = "เชื่อมต่อ LINE กับเพจเรียบร้อยแล้ว คุณสามารถถามผลวิเคราะห์ได้เลย"
+		}
+	} else {
+		var err error
+		answer, err = c.line.Chat(requestCtx, lineUserID, text)
+		if err != nil {
+			log.Printf("LINE chat failed for %s: %v", lineUserID, err)
+			answer = "ขออภัย ระบบยังตอบคำถามไม่ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง"
+		}
+	}
+
+	if err := c.line.Reply(requestCtx, replyToken, answer); err != nil {
+		log.Printf("LINE reply failed for %s: %v", lineUserID, err)
+	}
 }
