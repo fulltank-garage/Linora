@@ -144,6 +144,13 @@ func (s *PageService) Delete(ctx context.Context, ownerID string, pageID string)
 	return s.store.DeletePage(ctx, ownerID, pageID)
 }
 
+func (s *PageService) Disconnect(ctx context.Context, ownerID string, pageID string) error {
+	if s.cache != nil {
+		_ = s.cache.Delete(ctx, ownerID, pageID)
+	}
+	return s.store.DisconnectPage(ctx, ownerID, pageID)
+}
+
 func (s *PageService) CreateLineLinkCode(ctx context.Context, ownerID string, pageID string) (string, error) {
 	if _, err := s.store.GetConnection(ctx, ownerID, pageID); err != nil {
 		return "", err

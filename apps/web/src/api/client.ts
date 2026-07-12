@@ -46,3 +46,11 @@ export async function selectConnectedFacebookPage(pageId: string) {
   const response = await api.post<{ page: FacebookPageSummary; report: AnalysisReport }>(`/api/facebook/pages/${pageId}/select`);
   return response.data;
 }
+
+export async function disconnectFacebookPage(pageId: string) {
+  await api.delete(`/api/facebook/pages/${pageId}/connection`);
+}
+
+export async function deleteFacebookPageData(pageId: string) {
+  await api.delete(`/api/facebook/pages/${pageId}`);
+}

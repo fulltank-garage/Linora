@@ -86,6 +86,14 @@ func (c *IntegrationController) DeletePage(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 
+func (c *IntegrationController) DisconnectPage(ctx *gin.Context) {
+	if err := c.page.Disconnect(ctx.Request.Context(), middleware.LineUserID(ctx), ctx.Param("pageID")); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถยกเลิกการเชื่อมต่อเพจได้"})
+		return
+	}
+	ctx.Status(http.StatusNoContent)
+}
+
 func (c *IntegrationController) CreateLineLinkCode(ctx *gin.Context) {
 	code, err := c.page.CreateLineLinkCode(ctx.Request.Context(), middleware.LineUserID(ctx), ctx.Param("pageID"))
 	if err != nil {

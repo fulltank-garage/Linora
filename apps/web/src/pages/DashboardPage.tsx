@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, Button, Card, CardContent, Chip, CircularProgress, Drawer, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Drawer, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import {
   AccessTime,
   AdsClick,
@@ -21,8 +21,8 @@ import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
 import { ComplianceLinks } from "../components/ComplianceLinks";
 
 type DashboardPageProps = {
-  onDeleteData: () => void;
-  onDisconnect: () => void;
+  onDeleteData: () => Promise<void>;
+  onDisconnect: () => Promise<void>;
   page: FacebookPageSummary;
   report: AnalysisReport;
 };
@@ -42,6 +42,8 @@ function formatMetric(value: number | undefined) {
 export function DashboardPage({ onDeleteData, onDisconnect, page, report }: DashboardPageProps) {
   const navigate = useNavigate();
   const [isManagementOpen, setIsManagementOpen] = useState(false);
+  const [managementAction, setManagementAction] = useState<"delete" | "disconnect" | null>(null);
+  const [managementError, setManagementError] = useState("");
   const healthLabel = getHealthLabel(report.healthScore);
   const bestPostingTime = report.bestPostingTimes[0] ?? "19:00";
   const importantComment = report.importantComments[0];
@@ -59,6 +61,26 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
     { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: formatMetric(report.metrics?.engagements) },
     { icon: <AdsClick />, label: "คลิกทั้งหมด", value: formatMetric(report.metrics?.clicks) },
   ];
+
+  async function handleManagementAction(action: "delete" | "disconnect") {
+    if (action === "delete" && !window.confirm("ลบข้อมูล Page, รายงาน และตัวเลขวิเคราะห์ทั้งหมดของ Linora ใช่หรือไม่?")) {
+      return;
+    }
+    setManagementAction(action);
+    setManagementError("");
+    try {
+      if (action === "disconnect") {
+        await onDisconnect();
+      } else {
+        await onDeleteData();
+      }
+      setIsManagementOpen(false);
+    } catch {
+      setManagementError("ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setManagementAction(null);
+    }
+  }
 
   return (
     <>
@@ -538,7 +560,7 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
         open={isManagementOpen}
         slotProps={{
           paper: {
-            sx: { 
+            sx: {
               borderRadius: "50% 50% 0 0 / 28px 28px 0 0",
             maxWidth: 430,
             mx: "auto",
@@ -558,12 +580,11 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
           <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
             คุณสามารถยกเลิกการเชื่อมต่อหรือลบข้อมูล Linora ได้ทุกเมื่อ การลบข้อมูลจะนำเพจที่เลือกและสิทธิ์ที่อนุญาตออกจากเบราว์เซอร์นี้
           </Typography>
+          {managementError ? <Alert severity="error">{managementError}</Alert> : null}
           <Button
+            disabled={managementAction !== null}
             fullWidth
-            onClick={() => {
-              setIsManagementOpen(false);
-              onDisconnect();
-            }}
+            onClick={() => void handleManagementAction("disconnect")}
             startIcon={<LinkOff />}
             sx={{
               borderColor: "#1877F2",
@@ -576,11 +597,9 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
           </Button>
           <Button
             color="error"
+            disabled={managementAction !== null}
             fullWidth
-            onClick={() => {
-              setIsManagementOpen(false);
-              onDeleteData();
-            }}
+            onClick={() => void handleManagementAction("delete")}
             startIcon={<DeleteOutlined />}
             variant="contained"
           >

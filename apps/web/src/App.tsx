@@ -13,6 +13,8 @@ import { PageSelectPage } from "./pages/PageSelectPage";
 import {
   completeFacebookLogin,
   connectFacebookPage,
+  deleteFacebookPageData,
+  disconnectFacebookPage,
   getConnectedFacebookPages,
   selectConnectedFacebookPage,
   startFacebookLogin,
@@ -126,6 +128,18 @@ function AppRoutes() {
     setFacebookHandoffCode(null);
   }
 
+  async function disconnectSelectedPage() {
+    if (!selectedPage) return;
+    await disconnectFacebookPage(selectedPage.pageId);
+    clearFacebookSession();
+  }
+
+  async function deleteSelectedPageData() {
+    if (!selectedPage) return;
+    await deleteFacebookPageData(selectedPage.pageId);
+    clearFacebookSession();
+  }
+
   if (!isLineIdentityReady) {
     return (
       <MobileAppShell>
@@ -188,8 +202,8 @@ function AppRoutes() {
             element={
               canViewDashboard ? (
                 <DashboardPage
-                  onDeleteData={clearFacebookSession}
-                  onDisconnect={clearFacebookSession}
+                  onDeleteData={deleteSelectedPageData}
+                  onDisconnect={disconnectSelectedPage}
                   page={selectedPage}
                   report={latestReport}
                 />

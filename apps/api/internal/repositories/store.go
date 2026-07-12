@@ -26,6 +26,7 @@ type PageConnection struct {
 type Store interface {
 	CreateLinkCode(context.Context, string, string, string, time.Time) error
 	DeletePage(context.Context, string, string) error
+	DisconnectPage(context.Context, string, string) error
 	EnsureLineUser(context.Context, string) error
 	GetConnection(context.Context, string, string) (PageConnection, error)
 	GetLatestReport(context.Context, string, string) (models.AnalysisReport, error)
@@ -252,14 +253,45 @@ func (s *PostgresStore) GetLinkedPage(ctx context.Context, lineUserID string) (s
 }
 
 func (s *PostgresStore) DeletePage(ctx context.Context, ownerID string, pageID string) error {
-	_, err := s.pool.Exec(ctx, `DELETE FROM page_connections WHERE owner_id = $1 AND page_id = $2`, ownerID, pageID)
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = s.pool.Exec(ctx, `DELETE FROM page_metrics WHERE owner_id = $1 AND page_id = $2`, ownerID, pageID)
+	defer tx.Rollback(ctx)
+
+	if _, err = tx.Exec(ctx, `DELETE FROM line_page_links WHERE line_user_id = $1 AND page_id = $2`, ownerID, pageID); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, `DELETE FROM line_link_codes WHERE owner_id = $1 AND page_id = $2`, ownerID, pageID); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, `DELETE FROM page_metrics WHERE owner_id = $1 AND page_id = $2`, ownerID, pageID); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, `DELETE FROM analysis_reports WHERE owner_id = $1 AND page_id = $2`, ownerID, pageID); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, `DELETE FROM page_connections WHERE owner_id = $1 AND page_id = $2`, ownerID, pageID); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+func (s *PostgresStore) DisconnectPage(ctx context.Context, ownerID string, pageID string) error {
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = s.pool.Exec(ctx, `DELETE FROM analysis_reports WHERE owner_id = $1 AND page_id = $2`, ownerID, pageID)
-	return err
+	defer tx.Rollback(ctx)
+
+	if _, err = tx.Exec(ctx, `DELETE FROM line_page_links WHERE line_user_id = $1 AND page_id = $2`, ownerID, pageID); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, `DELETE FROM line_link_codes WHERE owner_id = $1 AND page_id = $2`, ownerID, pageID); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, `DELETE FROM page_connections WHERE owner_id = $1 AND page_id = $2`, ownerID, pageID); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
