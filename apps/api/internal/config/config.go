@@ -24,9 +24,10 @@ type AIConfig struct {
 }
 
 type LineConfig struct {
-	ChannelAccessToken string
-	ChannelID          string
-	ChannelSecret      string
+	ChannelAccessToken  string
+	ChannelID           string
+	ChannelSecret       string
+	DashboardRichMenuID string
 }
 
 type Config struct {
@@ -69,9 +70,10 @@ func Load() Config {
 			Scopes:       splitScopes(os.Getenv("FACEBOOK_SCOPES")),
 		},
 		Line: LineConfig{
-			ChannelAccessToken: os.Getenv("LINE_CHANNEL_ACCESS_TOKEN"),
-			ChannelID:          os.Getenv("LINE_CHANNEL_ID"),
-			ChannelSecret:      os.Getenv("LINE_CHANNEL_SECRET"),
+			ChannelAccessToken:  os.Getenv("LINE_CHANNEL_ACCESS_TOKEN"),
+			ChannelID:           os.Getenv("LINE_CHANNEL_ID"),
+			ChannelSecret:       os.Getenv("LINE_CHANNEL_SECRET"),
+			DashboardRichMenuID: os.Getenv("LINE_RICH_MENU_DASHBOARD_ID"),
 		},
 	}
 }

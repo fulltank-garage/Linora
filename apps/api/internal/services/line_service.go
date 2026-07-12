@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/fulltank-garage/linora/apps/api/internal/config"
@@ -16,14 +17,41 @@ import (
 )
 
 type LineService struct {
-	ai     *AIService
-	config config.LineConfig
-	http   *http.Client
-	store  repositories.Store
+	apiBaseURL string
+	ai         *AIService
+	config     config.LineConfig
+	http       *http.Client
+	store      repositories.Store
 }
 
 func NewLineService(store repositories.Store, ai *AIService, cfg config.LineConfig) *LineService {
-	return &LineService{ai: ai, config: cfg, http: &http.Client{}, store: store}
+	return &LineService{apiBaseURL: "https://api.line.me", ai: ai, config: cfg, http: &http.Client{}, store: store}
+}
+
+func (s *LineService) LinkDashboardRichMenu(ctx context.Context, lineUserID string) error {
+	if s.config.ChannelAccessToken == "" || s.config.DashboardRichMenuID == "" || strings.TrimSpace(lineUserID) == "" {
+		return nil
+	}
+
+	baseURL := s.apiBaseURL
+	if baseURL == "" {
+		baseURL = "https://api.line.me"
+	}
+	endpoint := strings.TrimRight(baseURL, "/") + "/v2/bot/user/" + url.PathEscape(lineUserID) + "/richmenu/" + url.PathEscape(s.config.DashboardRichMenuID)
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Authorization", "Bearer "+s.config.ChannelAccessToken)
+	response, err := s.http.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return errors.New("LINE rich menu link request failed")
+	}
+	return nil
 }
 
 func (s *LineService) Link(ctx context.Context, lineUserID string, code string) (string, error) {

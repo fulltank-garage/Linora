@@ -11,6 +11,7 @@ import { LegalPage } from "./pages/LegalPage";
 import { ManualAnalyzePage } from "./pages/ManualAnalyzePage";
 import { PageSelectPage } from "./pages/PageSelectPage";
 import {
+  activateDashboardRichMenu,
   completeFacebookLogin,
   connectFacebookPage,
   deleteFacebookPageData,
@@ -126,6 +127,7 @@ function AppRoutes() {
     setLatestReport(result.report);
     setHasPagePermission(true);
     setFacebookHandoffCode(null);
+    void activateDashboardRichMenu().catch(() => undefined);
   }
 
   async function disconnectSelectedPage() {
