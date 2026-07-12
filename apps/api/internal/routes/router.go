@@ -15,7 +15,6 @@ func NewRouter(cfg config.Config, analysisService *services.AnalysisService, fac
 	router := gin.New()
 	router.Use(gin.Recovery(), middleware.CORS(cfg.Facebook.AppURL))
 
-	analysisController := controllers.NewAnalysisController(analysisService)
 	facebookController := controllers.NewFacebookController(facebookService)
 	requireLineIdentity := middleware.RequireLineIdentity(lineIdentity, cfg.Environment)
 	if pageService != nil && lineService != nil {
@@ -39,7 +38,6 @@ func NewRouter(cfg config.Config, analysisService *services.AnalysisService, fac
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "service": "linora-api"})
 	})
-	router.POST("/api/analysis/manual", analysisController.Manual)
 	router.POST("/api/facebook/login", requireLineIdentity, facebookController.Begin)
 	router.GET("/api/facebook/callback", facebookController.Callback)
 	router.GET("/api/facebook/session", requireLineIdentity, facebookController.Session)

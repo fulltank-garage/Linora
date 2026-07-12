@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { AnalysisReport, FacebookPageSummary, ManualAnalysisRequest, ManualAnalysisResponse } from "@linora/shared";
+import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:8080",
@@ -13,11 +13,6 @@ export function setLineIdentityToken(idToken: string) {
 export function setDevelopmentLineUser(userID: string) {
   if (!import.meta.env.DEV) return;
   api.defaults.headers.common["X-Linora-Dev-User"] = userID;
-}
-
-export async function runManualAnalysis(input: ManualAnalysisRequest) {
-  const response = await api.post<ManualAnalysisResponse>("/api/analysis/manual", input);
-  return response.data.report;
 }
 
 export async function startFacebookLogin() {

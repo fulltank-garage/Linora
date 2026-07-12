@@ -8,7 +8,6 @@ import { AnalyzingPage } from "./pages/AnalyzingPage";
 import { ConnectFacebookPage } from "./pages/ConnectFacebookPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LegalPage } from "./pages/LegalPage";
-import { ManualAnalyzePage } from "./pages/ManualAnalyzePage";
 import { PageSelectPage } from "./pages/PageSelectPage";
 import {
   activateConnectRichMenu,
@@ -256,7 +255,6 @@ function AppRoutes() {
             path="/pages"
           />
           <Route element={<AnalyzingPage />} path="/analyzing" />
-          <Route element={<ManualAnalyzePage onReport={setLatestReport} />} path="/manual-analyze" />
           <Route element={<LegalPage type="privacy" />} path="/privacy" />
           <Route element={<LegalPage type="terms" />} path="/terms" />
           <Route element={<LegalPage type="data-deletion" />} path="/data-deletion" />

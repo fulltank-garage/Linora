@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,16 +17,6 @@ func newTestRouter() http.Handler {
 func TestHealthRoute(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	newTestRouter().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/health", nil))
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
-	}
-}
-
-func TestManualAnalysisRoute(t *testing.T) {
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodPost, "/api/analysis/manual", bytes.NewBufferString(`{"pageName":"Linora Cafe","postContent":"โปรโมชัน","likes":80}`))
-	request.Header.Set("Content-Type", "application/json")
-	newTestRouter().ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusOK)
 	}

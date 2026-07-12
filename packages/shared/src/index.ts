@@ -13,16 +13,6 @@ export type FacebookPageSummary = {
   isActive: boolean;
 };
 
-export type ManualAnalysisRequest = {
-  pageName: string;
-  postContent: string;
-  likes: number;
-  comments: number;
-  shares: number;
-  importantComments: string;
-  extraNotes: string;
-};
-
 export type TopPost = {
   postId: string;
   reason: string;
@@ -55,10 +45,6 @@ export type AnalysisReport = {
   lineSummaryMessage: string;
   createdAt: string;
   metrics?: PageMetrics;
-};
-
-export type ManualAnalysisResponse = {
-  report: AnalysisReport;
 };
 
 export type ApiError = {
