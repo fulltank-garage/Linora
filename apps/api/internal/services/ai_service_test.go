@@ -48,3 +48,60 @@ func TestCompleteDeepSeekUsesChatCompletions(t *testing.T) {
 		t.Fatalf("unexpected answer: %q", answer)
 	}
 }
+
+func TestCompleteGeminiUsesGenerateContent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/models/gemini-test:generateContent" {
+			t.Fatalf("unexpected request path: %s", request.URL.Path)
+		}
+		if got := request.Header.Get("x-goog-api-key"); got != "gemini-key" {
+			t.Fatalf("unexpected API key header: %q", got)
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"candidates":[{"content":{"parts":[{"text":"คำแนะนำจาก Gemini"}]}}]}`))
+	}))
+	defer server.Close()
+
+	service := &AIService{
+		config: config.AIConfig{APIKey: "gemini-key", BaseURL: server.URL, Model: "gemini-test", Provider: "gemini"},
+		http:   server.Client(),
+	}
+
+	answer, err := service.complete(context.Background(), "วิเคราะห์เพจนี้")
+	if err != nil {
+		t.Fatalf("complete returned an error: %v", err)
+	}
+	if answer != "คำแนะนำจาก Gemini" {
+		t.Fatalf("unexpected answer: %q", answer)
+	}
+}
+
+func TestCompleteAnthropicUsesMessages(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/messages" {
+			t.Fatalf("unexpected request path: %s", request.URL.Path)
+		}
+		if got := request.Header.Get("x-api-key"); got != "anthropic-key" {
+			t.Fatalf("unexpected API key header: %q", got)
+		}
+		if got := request.Header.Get("anthropic-version"); got != "2023-06-01" {
+			t.Fatalf("unexpected Anthropic version: %q", got)
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"content":[{"type":"text","text":"คำแนะนำจาก Claude"}]}`))
+	}))
+	defer server.Close()
+
+	service := &AIService{
+		config: config.AIConfig{APIKey: "anthropic-key", BaseURL: server.URL, Model: "claude-test", Provider: "anthropic"},
+		http:   server.Client(),
+	}
+
+	answer, err := service.complete(context.Background(), "วิเคราะห์เพจนี้")
+	if err != nil {
+		t.Fatalf("complete returned an error: %v", err)
+	}
+	if answer != "คำแนะนำจาก Claude" {
+		t.Fatalf("unexpected answer: %q", answer)
+	}
+}

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -42,7 +43,7 @@ type Config struct {
 	RedisURL      string
 }
 
-func Load() Config {
+func Load() (Config, error) {
 	_ = godotenv.Load()
 
 	port := os.Getenv("PORT")
@@ -50,7 +51,7 @@ func Load() Config {
 		port = "8080"
 	}
 
-	return Config{
+	cfg := Config{
 		AI: AIConfig{
 			APIKey:   os.Getenv("AI_API_KEY"),
 			BaseURL:  os.Getenv("AI_BASE_URL"),
@@ -77,6 +78,36 @@ func Load() Config {
 			ConnectRichMenuID:   os.Getenv("LINE_RICH_MENU_CONNECT_ID"),
 			DashboardRichMenuID: os.Getenv("LINE_RICH_MENU_DASHBOARD_ID"),
 		},
+	}
+	if err := cfg.AI.Validate(); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
+}
+
+func (c AIConfig) Validate() error {
+	missing := make([]string, 0, 4)
+	if strings.TrimSpace(c.Provider) == "" {
+		missing = append(missing, "AI_PROVIDER")
+	}
+	if strings.TrimSpace(c.BaseURL) == "" {
+		missing = append(missing, "AI_BASE_URL")
+	}
+	if strings.TrimSpace(c.Model) == "" {
+		missing = append(missing, "AI_MODEL")
+	}
+	if strings.TrimSpace(c.APIKey) == "" {
+		missing = append(missing, "AI_API_KEY")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required AI environment variables: %s", strings.Join(missing, ", "))
+	}
+
+	switch strings.ToLower(strings.TrimSpace(c.Provider)) {
+	case "anthropic", "deepseek", "gemini", "openai", "openai-compatible":
+		return nil
+	default:
+		return fmt.Errorf("unsupported AI_PROVIDER: %s", c.Provider)
 	}
 }
 

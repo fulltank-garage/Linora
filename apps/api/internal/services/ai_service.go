@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -24,8 +25,7 @@ func NewAIService(cfg config.AIConfig) *AIService {
 }
 
 func (s *AIService) Enabled() bool {
-	provider := strings.ToLower(strings.TrimSpace(s.config.Provider))
-	return s.config.APIKey != "" && s.config.BaseURL != "" && s.config.Model != "" && (provider == "openai" || provider == "deepseek")
+	return s.config.Validate() == nil
 }
 
 func (s *AIService) EnhanceReport(ctx context.Context, report models.AnalysisReport) models.AnalysisReport {
@@ -62,10 +62,14 @@ func (s *AIService) Answer(ctx context.Context, report models.AnalysisReport, qu
 
 func (s *AIService) complete(ctx context.Context, prompt string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(s.config.Provider)) {
-	case "deepseek":
+	case "deepseek", "openai-compatible":
 		return s.completeChatCompletions(ctx, prompt)
 	case "openai":
 		return s.completeResponses(ctx, prompt)
+	case "gemini":
+		return s.completeGemini(ctx, prompt)
+	case "anthropic":
+		return s.completeAnthropic(ctx, prompt)
 	default:
 		return "", fmt.Errorf("unsupported AI provider: %s", s.config.Provider)
 	}
@@ -136,6 +140,86 @@ func (s *AIService) completeChatCompletions(ctx context.Context, prompt string) 
 		return "", errors.New("AI response contains no choices")
 	}
 	return strings.TrimSpace(payload.Choices[0].Message.Content), nil
+}
+
+func (s *AIService) completeGemini(ctx context.Context, prompt string) (string, error) {
+	body, err := json.Marshal(map[string]any{
+		"contents":         []map[string]any{{"parts": []map[string]string{{"text": prompt}}}},
+		"generationConfig": map[string]float64{"temperature": 0.2},
+	})
+	if err != nil {
+		return "", err
+	}
+	endpoint := strings.TrimRight(s.config.BaseURL, "/") + "/models/" + url.PathEscape(s.config.Model) + ":generateContent"
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	request.Header.Set("x-goog-api-key", s.config.APIKey)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := s.http.Do(request)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return "", fmt.Errorf("AI request returned %s", response.Status)
+	}
+	var payload struct {
+		Candidates []struct {
+			Content struct {
+				Parts []struct {
+					Text string `json:"text"`
+				} `json:"parts"`
+			} `json:"content"`
+		} `json:"candidates"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return "", err
+	}
+	if len(payload.Candidates) == 0 || len(payload.Candidates[0].Content.Parts) == 0 {
+		return "", errors.New("AI response contains no content")
+	}
+	return strings.TrimSpace(payload.Candidates[0].Content.Parts[0].Text), nil
+}
+
+func (s *AIService) completeAnthropic(ctx context.Context, prompt string) (string, error) {
+	body, err := json.Marshal(map[string]any{
+		"max_tokens":  1024,
+		"messages":    []map[string]string{{"role": "user", "content": prompt}},
+		"model":       s.config.Model,
+		"temperature": 0.2,
+	})
+	if err != nil {
+		return "", err
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(s.config.BaseURL, "/")+"/messages", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	request.Header.Set("anthropic-version", "2023-06-01")
+	request.Header.Set("x-api-key", s.config.APIKey)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := s.http.Do(request)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return "", fmt.Errorf("AI request returned %s", response.Status)
+	}
+	var payload struct {
+		Content []struct {
+			Text string `json:"text"`
+		} `json:"content"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return "", err
+	}
+	if len(payload.Content) == 0 {
+		return "", errors.New("AI response contains no content")
+	}
+	return strings.TrimSpace(payload.Content[0].Text), nil
 }
 
 func mustJSON(value any) string {
