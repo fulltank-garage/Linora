@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import type { FacebookPageSummary } from "@linora/shared";
 import { InsightCard } from "@linora/ui";
 import { ComplianceLinks } from "../components/ComplianceLinks";
+import { LoadingDots } from "../components/LoadingDots";
 
 type PageSelectPageProps = {
   selectedPage: FacebookPageSummary | null;
@@ -163,7 +164,7 @@ export function PageSelectPage({
             fullWidth
             onClick={handleAuthorize}
             size="large"
-            startIcon={<ShieldOutlined />}
+            startIcon={isAuthorizing ? <LoadingDots color="currentColor" size={7} /> : <ShieldOutlined />}
             variant="contained"
           >
             อนุญาตและเข้าสู่หน้าวิเคราะห์

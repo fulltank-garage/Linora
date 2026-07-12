@@ -1,6 +1,11 @@
 import { Box } from "@mui/material";
 
-export function LoadingDots() {
+type LoadingDotsProps = {
+  color?: string;
+  size?: number;
+};
+
+export function LoadingDots({ color = "primary.main", size = 10 }: LoadingDotsProps) {
   return (
     <Box
       aria-label="กำลังโหลด"
@@ -26,10 +31,10 @@ export function LoadingDots() {
           sx={{
             animation: "linora-loading-dot-bounce 900ms ease-in-out infinite",
             animationDelay: `${index * 140}ms`,
-            bgcolor: "primary.main",
+            bgcolor: color,
             borderRadius: "50%",
-            height: 10,
-            width: 10,
+            height: size,
+            width: size,
           }}
         />
       ))}

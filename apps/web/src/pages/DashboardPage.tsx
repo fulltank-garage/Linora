@@ -16,6 +16,7 @@ import {
   VisibilityOutlined,
   WorkspacePremium,
 } from "@mui/icons-material";
+import { LoadingDots } from "../components/LoadingDots";
 import { useNavigate } from "react-router-dom";
 import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
 import { ComplianceLinks } from "../components/ComplianceLinks";
@@ -525,7 +526,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
             fullWidth
             onClick={() => void handlePageAnalysis()}
             size="large"
-            startIcon={isAnalyzing ? <CircularProgress color="inherit" size={18} /> : <AutoAwesome />}
+            startIcon={isAnalyzing ? <LoadingDots color="currentColor" size={7} /> : <AutoAwesome />}
             variant="contained"
           >
             เริ่มวิเคราะห์เพจ
