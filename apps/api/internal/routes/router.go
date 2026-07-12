@@ -31,6 +31,7 @@ func NewRouter(cfg config.Config, analysisService *services.AnalysisService, fac
 		facebook.POST("/pages/:pageID/line-link-code", integrationController.CreateLineLinkCode)
 		router.POST("/api/line/link", integrationController.LinkLine)
 		router.POST("/api/line/chat", integrationController.LocalLineChat)
+		router.POST("/api/line/rich-menu/connect", requireLineIdentity, integrationController.ActivateConnectRichMenu)
 		router.POST("/api/line/rich-menu/dashboard", requireLineIdentity, integrationController.ActivateDashboardRichMenu)
 		router.POST("/api/line/webhook", integrationController.LineWebhook)
 	}

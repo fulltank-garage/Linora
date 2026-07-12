@@ -27,6 +27,7 @@ type LineConfig struct {
 	ChannelAccessToken  string
 	ChannelID           string
 	ChannelSecret       string
+	ConnectRichMenuID   string
 	DashboardRichMenuID string
 }
 
@@ -73,6 +74,7 @@ func Load() Config {
 			ChannelAccessToken:  os.Getenv("LINE_CHANNEL_ACCESS_TOKEN"),
 			ChannelID:           os.Getenv("LINE_CHANNEL_ID"),
 			ChannelSecret:       os.Getenv("LINE_CHANNEL_SECRET"),
+			ConnectRichMenuID:   os.Getenv("LINE_RICH_MENU_CONNECT_ID"),
 			DashboardRichMenuID: os.Getenv("LINE_RICH_MENU_DASHBOARD_ID"),
 		},
 	}

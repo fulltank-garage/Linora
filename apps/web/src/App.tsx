@@ -11,6 +11,7 @@ import { LegalPage } from "./pages/LegalPage";
 import { ManualAnalyzePage } from "./pages/ManualAnalyzePage";
 import { PageSelectPage } from "./pages/PageSelectPage";
 import {
+  activateConnectRichMenu,
   activateDashboardRichMenu,
   completeFacebookLogin,
   connectFacebookPage,
@@ -133,12 +134,14 @@ function AppRoutes() {
   async function disconnectSelectedPage() {
     if (!selectedPage) return;
     await disconnectFacebookPage(selectedPage.pageId);
+    void activateConnectRichMenu().catch(() => undefined);
     clearFacebookSession();
   }
 
   async function deleteSelectedPageData() {
     if (!selectedPage) return;
     await deleteFacebookPageData(selectedPage.pageId);
+    void activateConnectRichMenu().catch(() => undefined);
     clearFacebookSession();
   }
 

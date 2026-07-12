@@ -58,3 +58,7 @@ export async function deleteFacebookPageData(pageId: string) {
 export async function activateDashboardRichMenu() {
   await api.post("/api/line/rich-menu/dashboard");
 }
+
+export async function activateConnectRichMenu() {
+  await api.post("/api/line/rich-menu/connect");
+}

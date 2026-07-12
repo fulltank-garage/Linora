@@ -36,3 +36,28 @@ func TestLinkDashboardRichMenu(t *testing.T) {
 		t.Fatalf("unexpected request path: %q", requestPath)
 	}
 }
+
+func TestLinkConnectRichMenu(t *testing.T) {
+	requestPath := ""
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		requestPath = request.URL.Path
+		writer.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	service := &LineService{
+		apiBaseURL: server.URL,
+		config: config.LineConfig{
+			ChannelAccessToken: "channel-token",
+			ConnectRichMenuID:  "richmenu-connect",
+		},
+		http: server.Client(),
+	}
+
+	if err := service.LinkConnectRichMenu(context.Background(), "U123"); err != nil {
+		t.Fatalf("LinkConnectRichMenu returned an error: %v", err)
+	}
+	if requestPath != "/v2/bot/user/U123/richmenu/richmenu-connect" {
+		t.Fatalf("unexpected request path: %q", requestPath)
+	}
+}

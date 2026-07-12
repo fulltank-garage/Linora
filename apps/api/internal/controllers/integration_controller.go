@@ -111,6 +111,14 @@ func (c *IntegrationController) ActivateDashboardRichMenu(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 
+func (c *IntegrationController) ActivateConnectRichMenu(ctx *gin.Context) {
+	if err := c.line.LinkConnectRichMenu(ctx.Request.Context(), middleware.LineUserID(ctx)); err != nil {
+		ctx.JSON(http.StatusBadGateway, gin.H{"error": "Unable to update the LINE menu."})
+		return
+	}
+	ctx.Status(http.StatusNoContent)
+}
+
 func (c *IntegrationController) LocalLineChat(ctx *gin.Context) {
 	var input struct {
 		Message    string `json:"message"`

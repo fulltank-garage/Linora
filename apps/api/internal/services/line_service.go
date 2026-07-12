@@ -29,7 +29,15 @@ func NewLineService(store repositories.Store, ai *AIService, cfg config.LineConf
 }
 
 func (s *LineService) LinkDashboardRichMenu(ctx context.Context, lineUserID string) error {
-	if s.config.ChannelAccessToken == "" || s.config.DashboardRichMenuID == "" || strings.TrimSpace(lineUserID) == "" {
+	return s.linkRichMenu(ctx, lineUserID, s.config.DashboardRichMenuID)
+}
+
+func (s *LineService) LinkConnectRichMenu(ctx context.Context, lineUserID string) error {
+	return s.linkRichMenu(ctx, lineUserID, s.config.ConnectRichMenuID)
+}
+
+func (s *LineService) linkRichMenu(ctx context.Context, lineUserID string, richMenuID string) error {
+	if s.config.ChannelAccessToken == "" || richMenuID == "" || strings.TrimSpace(lineUserID) == "" {
 		return nil
 	}
 
@@ -37,7 +45,7 @@ func (s *LineService) LinkDashboardRichMenu(ctx context.Context, lineUserID stri
 	if baseURL == "" {
 		baseURL = "https://api.line.me"
 	}
-	endpoint := strings.TrimRight(baseURL, "/") + "/v2/bot/user/" + url.PathEscape(lineUserID) + "/richmenu/" + url.PathEscape(s.config.DashboardRichMenuID)
+	endpoint := strings.TrimRight(baseURL, "/") + "/v2/bot/user/" + url.PathEscape(lineUserID) + "/richmenu/" + url.PathEscape(richMenuID)
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
 		return err
