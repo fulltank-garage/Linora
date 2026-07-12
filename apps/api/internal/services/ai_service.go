@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -23,7 +24,8 @@ func NewAIService(cfg config.AIConfig) *AIService {
 }
 
 func (s *AIService) Enabled() bool {
-	return s.config.Provider == "openai" && s.config.APIKey != ""
+	provider := strings.ToLower(strings.TrimSpace(s.config.Provider))
+	return s.config.APIKey != "" && s.config.BaseURL != "" && s.config.Model != "" && (provider == "openai" || provider == "deepseek")
 }
 
 func (s *AIService) EnhanceReport(ctx context.Context, report models.AnalysisReport) models.AnalysisReport {
@@ -59,6 +61,17 @@ func (s *AIService) Answer(ctx context.Context, report models.AnalysisReport, qu
 }
 
 func (s *AIService) complete(ctx context.Context, prompt string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(s.config.Provider)) {
+	case "deepseek":
+		return s.completeChatCompletions(ctx, prompt)
+	case "openai":
+		return s.completeResponses(ctx, prompt)
+	default:
+		return "", fmt.Errorf("unsupported AI provider: %s", s.config.Provider)
+	}
+}
+
+func (s *AIService) completeResponses(ctx context.Context, prompt string) (string, error) {
 	body, err := json.Marshal(map[string]any{"model": s.config.Model, "input": prompt, "temperature": 0.2})
 	if err != nil {
 		return "", err
@@ -84,6 +97,45 @@ func (s *AIService) complete(ctx context.Context, prompt string) (string, error)
 		return "", err
 	}
 	return strings.TrimSpace(payload.OutputText), nil
+}
+
+func (s *AIService) completeChatCompletions(ctx context.Context, prompt string) (string, error) {
+	body, err := json.Marshal(map[string]any{
+		"model":       s.config.Model,
+		"messages":    []map[string]string{{"role": "user", "content": prompt}},
+		"temperature": 0.2,
+	})
+	if err != nil {
+		return "", err
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(s.config.BaseURL, "/")+"/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	request.Header.Set("Authorization", "Bearer "+s.config.APIKey)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := s.http.Do(request)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return "", fmt.Errorf("AI request returned %s", response.Status)
+	}
+	var payload struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return "", err
+	}
+	if len(payload.Choices) == 0 {
+		return "", errors.New("AI response contains no choices")
+	}
+	return strings.TrimSpace(payload.Choices[0].Message.Content), nil
 }
 
 func mustJSON(value any) string {

@@ -55,6 +55,11 @@ export async function deleteFacebookPageData(pageId: string) {
   await api.delete(`/api/facebook/pages/${pageId}`);
 }
 
+export async function syncFacebookPage(pageId: string) {
+  const response = await api.post<{ report: AnalysisReport }>(`/api/facebook/pages/${pageId}/sync`);
+  return response.data.report;
+}
+
 export async function activateDashboardRichMenu() {
   await api.post("/api/line/rich-menu/dashboard");
 }

@@ -16,11 +16,12 @@ import {
   VisibilityOutlined,
   WorkspacePremium,
 } from "@mui/icons-material";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
 import { ComplianceLinks } from "../components/ComplianceLinks";
 
 type DashboardPageProps = {
+  onAnalyze: () => Promise<void>;
   onDeleteData: () => Promise<void>;
   onDisconnect: () => Promise<void>;
   page: FacebookPageSummary;
@@ -39,11 +40,13 @@ function formatMetric(value: number | undefined) {
   return new Intl.NumberFormat("th-TH").format(value);
 }
 
-export function DashboardPage({ onDeleteData, onDisconnect, page, report }: DashboardPageProps) {
+export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, report }: DashboardPageProps) {
   const navigate = useNavigate();
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [managementAction, setManagementAction] = useState<"delete" | "disconnect" | null>(null);
   const [managementError, setManagementError] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState("");
   const healthLabel = getHealthLabel(report.healthScore);
   const bestPostingTime = report.bestPostingTimes[0] ?? "19:00";
   const importantComment = report.importantComments[0];
@@ -79,6 +82,18 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
       setManagementError("ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     } finally {
       setManagementAction(null);
+    }
+  }
+
+  async function handlePageAnalysis() {
+    setAnalysisError("");
+    setIsAnalyzing(true);
+    try {
+      await onAnalyze();
+    } catch {
+      setAnalysisError("ไม่สามารถวิเคราะห์เพจได้ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setIsAnalyzing(false);
     }
   }
 
@@ -504,12 +519,13 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report }: Dash
         }}
       >
         <Stack spacing={1} sx={{ maxWidth: 430, mx: "auto" }}>
+          {analysisError ? <Alert severity="error">{analysisError}</Alert> : null}
           <Button
-            component={Link}
+            disabled={isAnalyzing}
             fullWidth
+            onClick={() => void handlePageAnalysis()}
             size="large"
-            startIcon={<AutoAwesome />}
-            to="/manual-analyze"
+            startIcon={isAnalyzing ? <CircularProgress color="inherit" size={18} /> : <AutoAwesome />}
             variant="contained"
           >
             เริ่มวิเคราะห์เพจ

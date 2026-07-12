@@ -20,6 +20,7 @@ import {
   getConnectedFacebookPages,
   selectConnectedFacebookPage,
   startFacebookLogin,
+  syncFacebookPage,
 } from "./api/client";
 import { LoadingDots } from "./components/LoadingDots";
 import { initializeLineIdentity } from "./lib/line";
@@ -145,6 +146,12 @@ function AppRoutes() {
     clearFacebookSession();
   }
 
+  async function analyzeSelectedPage() {
+    if (!selectedPage) throw new Error("Facebook page is unavailable");
+    const report = await syncFacebookPage(selectedPage.pageId);
+    setLatestReport(report);
+  }
+
   if (!isLineIdentityReady) {
     return (
       <MobileAppShell>
@@ -207,6 +214,7 @@ function AppRoutes() {
             element={
               canViewDashboard ? (
                 <DashboardPage
+                  onAnalyze={analyzeSelectedPage}
                   onDeleteData={deleteSelectedPageData}
                   onDisconnect={disconnectSelectedPage}
                   page={selectedPage}
