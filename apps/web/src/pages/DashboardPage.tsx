@@ -529,7 +529,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
             startIcon={isAnalyzing ? <LoadingDots color="currentColor" size={7} /> : <AutoAwesome />}
             variant="contained"
           >
-            เริ่มวิเคราะห์เพจ
+            {isAnalyzing ? "กรุณารอสักครู่" : "เริ่มวิเคราะห์เพจ"}
           </Button>
           <Stack direction="row" spacing={1}>
             <Button
