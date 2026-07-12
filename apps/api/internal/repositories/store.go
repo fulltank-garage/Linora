@@ -90,7 +90,6 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 			payload JSONB NOT NULL,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 		);
-		CREATE INDEX IF NOT EXISTS analysis_reports_owner_page_created_idx ON analysis_reports(owner_id, page_id, created_at DESC);
 		CREATE TABLE IF NOT EXISTS line_link_codes (
 			code TEXT PRIMARY KEY,
 			owner_id TEXT NOT NULL,
@@ -116,6 +115,7 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 		ALTER TABLE page_connections ADD PRIMARY KEY (owner_id, page_id);
 		ALTER TABLE page_metrics DROP CONSTRAINT IF EXISTS page_metrics_pkey;
 		ALTER TABLE page_metrics ADD PRIMARY KEY (owner_id, page_id, recorded_on);
+		CREATE INDEX IF NOT EXISTS analysis_reports_owner_page_created_idx ON analysis_reports(owner_id, page_id, created_at DESC);
 	`)
 	return err
 }
