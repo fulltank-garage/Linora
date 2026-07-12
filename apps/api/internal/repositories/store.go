@@ -31,6 +31,7 @@ type Store interface {
 	GetConnection(context.Context, string, string) (PageConnection, error)
 	GetLatestReport(context.Context, string, string) (models.AnalysisReport, error)
 	GetLinkedPage(context.Context, string) (string, error)
+	LinkPageToLineUser(context.Context, string, string) error
 	ListConnections(context.Context, string) ([]PageConnection, error)
 	Migrate(context.Context) error
 	SaveMetrics(context.Context, string, string, models.PageMetrics) error
@@ -250,6 +251,14 @@ func (s *PostgresStore) GetLinkedPage(ctx context.Context, lineUserID string) (s
 		return "", ErrNotFound
 	}
 	return pageID, err
+}
+
+func (s *PostgresStore) LinkPageToLineUser(ctx context.Context, lineUserID string, pageID string) error {
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO line_page_links (line_user_id, page_id) VALUES ($1, $2)
+		ON CONFLICT (line_user_id) DO UPDATE SET page_id = EXCLUDED.page_id, linked_at = now()
+	`, lineUserID, pageID)
+	return err
 }
 
 func (s *PostgresStore) DeletePage(ctx context.Context, ownerID string, pageID string) error {

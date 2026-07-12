@@ -52,6 +52,9 @@ func (s *PageService) Connect(ctx context.Context, ownerID string, handoffCode s
 	if err != nil {
 		return models.ConnectedPageResponse{}, err
 	}
+	if err := s.store.LinkPageToLineUser(ctx, ownerID, page.PageID); err != nil {
+		return models.ConnectedPageResponse{}, err
+	}
 	page.AccessToken = ""
 	return models.ConnectedPageResponse{Page: page, Report: report}, nil
 }
@@ -83,6 +86,9 @@ func (s *PageService) Select(ctx context.Context, ownerID string, pageID string)
 		report, err = s.Sync(ctx, ownerID, pageID)
 	}
 	if err != nil {
+		return models.ConnectedPageResponse{}, err
+	}
+	if err := s.store.LinkPageToLineUser(ctx, ownerID, pageID); err != nil {
 		return models.ConnectedPageResponse{}, err
 	}
 	return models.ConnectedPageResponse{

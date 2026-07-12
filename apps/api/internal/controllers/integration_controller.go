@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -171,7 +172,7 @@ func (c *IntegrationController) LineWebhook(ctx *gin.Context) {
 			} `json:"message"`
 		} `json:"events"`
 	}
-	if err := ctx.ShouldBindJSON(&payload); err != nil {
+	if err := json.Unmarshal(body, &payload); err != nil {
 		ctx.Status(http.StatusBadRequest)
 		return
 	}
