@@ -185,18 +185,6 @@ func (c *IntegrationController) LineWebhook(ctx *gin.Context) {
 		}
 		text := strings.TrimSpace(event.Message.Text)
 		go c.replyToLineMessage(event.ReplyToken, event.Source.UserID, text)
-		continue
-		var answer string
-		if strings.HasPrefix(strings.ToUpper(text), "LIN-") {
-			if _, err := c.line.Link(ctx.Request.Context(), event.Source.UserID, text); err != nil {
-				answer = "รหัสเชื่อมต่อไม่ถูกต้องหรือหมดอายุแล้วครับ"
-			} else {
-				answer = "เชื่อม LINE กับเพจเรียบร้อยแล้วครับ ถามผลวิเคราะห์ได้เลย"
-			}
-		} else {
-			answer, _ = c.line.Chat(ctx.Request.Context(), event.Source.UserID, text)
-		}
-		_ = c.line.Reply(ctx.Request.Context(), event.ReplyToken, answer)
 	}
 	ctx.Status(http.StatusOK)
 }
