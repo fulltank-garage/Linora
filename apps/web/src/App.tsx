@@ -3,7 +3,6 @@ import { Box, Paper, Typography } from "@mui/material";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { MobileAppShell } from "@linora/ui";
 import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
-import { demoReport } from "./data/demo";
 import { AnalyzingPage } from "./pages/AnalyzingPage";
 import { ConnectFacebookPage } from "./pages/ConnectFacebookPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -30,7 +29,7 @@ function AppRoutes() {
   const location = useLocation();
   const navigate = useNavigate();
   const facebookHandoff = new URLSearchParams(location.search).get("facebook_connect");
-  const [latestReport, setLatestReport] = useState<AnalysisReport>(demoReport);
+  const [latestReport, setLatestReport] = useState<AnalysisReport | null>(null);
   const [hasFacebookLogin, setHasFacebookLogin] = useState(false);
   const [facebookPages, setFacebookPages] = useState<FacebookPageSummary[]>([]);
   const [facebookLoginError, setFacebookLoginError] = useState<string | null>(null);
@@ -42,12 +41,13 @@ function AppRoutes() {
   const [hasPagePermission, setHasPagePermission] = useState(false);
 
   const canViewDashboard =
-    hasFacebookLogin && selectedPage !== null && hasPagePermission;
+    hasFacebookLogin && selectedPage !== null && latestReport !== null && hasPagePermission;
 
   function clearFacebookSession() {
     setHasFacebookLogin(false);
     setFacebookPages([]);
     setFacebookHandoffCode(null);
+    setLatestReport(null);
     setSelectedPage(null);
     setHasPagePermission(false);
   }
@@ -211,7 +211,7 @@ function AppRoutes() {
           />
           <Route
             element={
-              canViewDashboard ? (
+              canViewDashboard && selectedPage && latestReport ? (
                 <DashboardPage
                   onAnalyze={analyzeSelectedPage}
                   onDeleteData={deleteSelectedPageData}
