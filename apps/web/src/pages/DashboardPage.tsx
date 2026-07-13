@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Drawer, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import {
   AccessTime,
@@ -17,6 +17,7 @@ import {
   WorkspacePremium,
 } from "@mui/icons-material";
 import { LoadingDots } from "../components/LoadingDots";
+import { CountUp } from "../components/CountUp";
 import { useNavigate } from "react-router-dom";
 import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
 import { ComplianceLinks } from "../components/ComplianceLinks";
@@ -48,6 +49,8 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
   const [managementError, setManagementError] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
+  const [scoreAnimationKey, setScoreAnimationKey] = useState(0);
+  const [visibleScore, setVisibleScore] = useState(0);
   const healthLabel = getHealthLabel(report.healthScore);
   const bestPostingTime = report.bestPostingTimes[0] ?? "19:00";
   const importantComment = report.importantComments[0];
@@ -65,6 +68,15 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
     { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: formatMetric(report.metrics?.engagements) },
     { icon: <AdsClick />, label: "คลิกทั้งหมด", value: formatMetric(report.metrics?.clicks) },
   ];
+
+  useEffect(() => {
+    setVisibleScore(0);
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => setVisibleScore(report.healthScore));
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [report.healthScore, scoreAnimationKey]);
 
   async function handleManagementAction(action: "delete" | "disconnect") {
     if (action === "delete" && !window.confirm("ลบข้อมูล Page, รายงาน และตัวเลขวิเคราะห์ทั้งหมดของ Linora ใช่หรือไม่?")) {
@@ -91,6 +103,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
     setIsAnalyzing(true);
     try {
       await onAnalyze();
+      setScoreAnimationKey((key) => key + 1);
     } catch {
       setAnalysisError("ไม่สามารถวิเคราะห์เพจได้ กรุณาลองใหม่อีกครั้ง");
     } finally {
@@ -232,17 +245,25 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                   <CircularProgress
                     size={96}
                     thickness={4}
-                    value={report.healthScore}
+                    value={visibleScore}
                     variant="determinate"
                     sx={{
                       color: "primary.main",
                       gridArea: "1 / 1",
                       transform: "rotate(-96deg) !important",
+                      "& .MuiCircularProgress-circle": {
+                        transition: "stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1)",
+                      },
                     }}
                   />
                   <Stack spacing={0} sx={{ alignItems: "center", gridArea: "1 / 1" }}>
                     <Typography color="primary.main" sx={{ fontSize: 30, fontWeight: 900, lineHeight: 1 }}>
-                      {report.healthScore}
+                      <CountUp
+                        duration={1.2}
+                        from={0}
+                        key={`${report.healthScore}-${scoreAnimationKey}`}
+                        to={report.healthScore}
+                      />
                     </Typography>
                     <Typography color="text.secondary" sx={{ fontSize: 13, fontWeight: 700 }}>
                       /100
