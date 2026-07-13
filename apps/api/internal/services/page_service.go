@@ -12,6 +12,8 @@ import (
 
 var ErrFacebookReconnectionRequired = errors.New("Facebook access needs to be connected again")
 
+var bangkokLocation = time.FixedZone("Asia/Bangkok", 7*60*60)
+
 type PageService struct {
 	analysis *AnalysisService
 	ai       *AIService
@@ -98,6 +100,30 @@ func (s *PageService) Dashboard(ctx context.Context, ownerID string) (models.Con
 		},
 		Report: report,
 	}, nil
+}
+
+func (s *PageService) WeeklyReport(ctx context.Context, ownerID string, pageID string) (models.WeeklyReport, error) {
+	if _, err := s.store.GetConnection(ctx, ownerID, pageID); err != nil {
+		return models.WeeklyReport{}, err
+	}
+	endDate := time.Now().In(bangkokLocation)
+	startDate := endDate.AddDate(0, 0, -6)
+	dailyMetrics, err := s.store.ListMetrics(ctx, ownerID, pageID, startDate, endDate)
+	if err != nil {
+		return models.WeeklyReport{}, err
+	}
+	weekly := models.WeeklyReport{
+		DaysWithData: len(dailyMetrics),
+		EndDate:      endDate.Format("2006-01-02"),
+		StartDate:    startDate.Format("2006-01-02"),
+	}
+	for _, daily := range dailyMetrics {
+		weekly.Metrics.Reach += daily.Metrics.Reach
+		weekly.Metrics.Impressions += daily.Metrics.Impressions
+		weekly.Metrics.Engagements += daily.Metrics.Engagements
+		weekly.Metrics.Clicks += daily.Metrics.Clicks
+	}
+	return weekly, nil
 }
 
 func (s *PageService) Select(ctx context.Context, ownerID string, pageID string) (models.ConnectedPageResponse, error) {

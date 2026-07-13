@@ -31,6 +31,7 @@ type Store interface {
 	GetConnection(context.Context, string, string) (PageConnection, error)
 	GetLatestReport(context.Context, string, string) (models.AnalysisReport, error)
 	GetLinkedPage(context.Context, string) (string, error)
+	ListMetrics(context.Context, string, string, time.Time, time.Time) ([]models.DailyPageMetrics, error)
 	LinkPageToLineUser(context.Context, string, string) error
 	ListConnections(context.Context, string) ([]PageConnection, error)
 	Migrate(context.Context) error
@@ -178,12 +179,37 @@ func (s *PostgresStore) ListConnections(ctx context.Context, ownerID string) ([]
 func (s *PostgresStore) SaveMetrics(ctx context.Context, ownerID string, pageID string, metrics models.PageMetrics) error {
 	_, err := s.pool.Exec(ctx, `
 		INSERT INTO page_metrics (owner_id, page_id, recorded_on, reach, impressions, engagements, clicks)
-		VALUES ($1, $2, CURRENT_DATE, $3, $4, $5, $6)
+		VALUES ($1, $2, (now() AT TIME ZONE 'Asia/Bangkok')::date, $3, $4, $5, $6)
 		ON CONFLICT (owner_id, page_id, recorded_on) DO UPDATE SET
 			reach = EXCLUDED.reach, impressions = EXCLUDED.impressions,
 			engagements = EXCLUDED.engagements, clicks = EXCLUDED.clicks
 	`, ownerID, pageID, metrics.Reach, metrics.Impressions, metrics.Engagements, metrics.Clicks)
 	return err
+}
+
+func (s *PostgresStore) ListMetrics(ctx context.Context, ownerID string, pageID string, startDate time.Time, endDate time.Time) ([]models.DailyPageMetrics, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT recorded_on, reach, impressions, engagements, clicks
+		FROM page_metrics
+		WHERE owner_id = $1 AND page_id = $2 AND recorded_on BETWEEN $3::date AND $4::date
+		ORDER BY recorded_on ASC
+	`, ownerID, pageID, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	metrics := make([]models.DailyPageMetrics, 0, 7)
+	for rows.Next() {
+		var recordedOn time.Time
+		var item models.DailyPageMetrics
+		if err := rows.Scan(&recordedOn, &item.Metrics.Reach, &item.Metrics.Impressions, &item.Metrics.Engagements, &item.Metrics.Clicks); err != nil {
+			return nil, err
+		}
+		item.RecordedOn = recordedOn.Format("2006-01-02")
+		metrics = append(metrics, item)
+	}
+	return metrics, rows.Err()
 }
 
 func (s *PostgresStore) SaveReport(ctx context.Context, ownerID string, pageID string, report models.AnalysisReport) error {

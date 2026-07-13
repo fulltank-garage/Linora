@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Box, Paper, Typography } from "@mui/material";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { MobileAppShell } from "@linora/ui";
-import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
+import type { AnalysisReport, FacebookPageSummary, WeeklyReport } from "@linora/shared";
 import { AnalyzingPage } from "./pages/AnalyzingPage";
 import { ConnectFacebookPage } from "./pages/ConnectFacebookPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -17,6 +17,7 @@ import {
   disconnectFacebookPage,
   getConnectedFacebookPages,
   getSavedFacebookDashboard,
+  getWeeklyFacebookReport,
   selectConnectedFacebookPage,
   startFacebookLogin,
   syncFacebookPage,
@@ -31,6 +32,7 @@ function AppRoutes() {
   const navigate = useNavigate();
   const facebookHandoff = new URLSearchParams(location.search).get("facebook_connect");
   const [latestReport, setLatestReport] = useState<AnalysisReport | null>(null);
+  const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null>(null);
   const [hasFacebookLogin, setHasFacebookLogin] = useState(false);
   const [facebookPages, setFacebookPages] = useState<FacebookPageSummary[]>([]);
   const [facebookLoginError, setFacebookLoginError] = useState<string | null>(null);
@@ -49,6 +51,7 @@ function AppRoutes() {
     setFacebookPages([]);
     setFacebookHandoffCode(null);
     setLatestReport(null);
+    setWeeklyReport(null);
     setSelectedPage(null);
     setHasPagePermission(false);
   }
@@ -65,6 +68,7 @@ function AppRoutes() {
         if (dashboard) {
           setSelectedPage(dashboard.page);
           setLatestReport(dashboard.report);
+          setWeeklyReport(dashboard.weeklyReport);
           setHasPagePermission(true);
         }
       })
@@ -132,6 +136,7 @@ function AppRoutes() {
       : await selectConnectedFacebookPage(selectedPage.pageId);
     setSelectedPage(result.page);
     setLatestReport(result.report);
+    setWeeklyReport(await getWeeklyFacebookReport(result.page.pageId));
     setHasPagePermission(true);
     setFacebookHandoffCode(null);
     void activateDashboardRichMenu().catch(() => undefined);
@@ -155,6 +160,7 @@ function AppRoutes() {
     if (!selectedPage) throw new Error("Facebook page is unavailable");
     const report = await syncFacebookPage(selectedPage.pageId);
     setLatestReport(report);
+    setWeeklyReport(await getWeeklyFacebookReport(selectedPage.pageId));
   }
 
   if (!isLineIdentityReady) {
@@ -224,6 +230,7 @@ function AppRoutes() {
                   onDisconnect={disconnectSelectedPage}
                   page={selectedPage}
                   report={latestReport}
+                  weeklyReport={weeklyReport}
                 />
               ) : (
                 <Navigate replace to={hasFacebookLogin ? "/pages" : "/connect-facebook"} />

@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
+import type { AnalysisReport, FacebookPageSummary, WeeklyReport } from "@linora/shared";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:8080",
@@ -39,12 +39,17 @@ export async function getConnectedFacebookPages() {
 
 export async function getSavedFacebookDashboard() {
   try {
-    const response = await api.get<{ page: FacebookPageSummary; report: AnalysisReport }>("/api/facebook/dashboard");
+    const response = await api.get<{ page: FacebookPageSummary; report: AnalysisReport; weeklyReport: WeeklyReport }>("/api/facebook/dashboard");
     return response.data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 404) return null;
     throw error;
   }
+}
+
+export async function getWeeklyFacebookReport(pageId: string) {
+  const response = await api.get<{ weeklyReport: WeeklyReport }>(`/api/facebook/pages/${pageId}/weekly-report`);
+  return response.data.weeklyReport;
 }
 
 export async function selectConnectedFacebookPage(pageId: string) {

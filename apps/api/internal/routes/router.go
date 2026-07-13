@@ -26,6 +26,7 @@ func NewRouter(cfg config.Config, analysisService *services.AnalysisService, fac
 		facebook.POST("/pages/:pageID/select", integrationController.SelectPage)
 		facebook.POST("/pages/:pageID/sync", integrationController.SyncPage)
 		facebook.GET("/pages/:pageID/report", integrationController.LatestReport)
+		facebook.GET("/pages/:pageID/weekly-report", integrationController.WeeklyReport)
 		facebook.DELETE("/pages/:pageID/connection", integrationController.DisconnectPage)
 		facebook.DELETE("/pages/:pageID", integrationController.DeletePage)
 		facebook.POST("/pages/:pageID/line-link-code", integrationController.CreateLineLinkCode)

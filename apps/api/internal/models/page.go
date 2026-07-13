@@ -7,6 +7,18 @@ type PageMetrics struct {
 	Reach       int64 `json:"reach"`
 }
 
+type DailyPageMetrics struct {
+	Metrics    PageMetrics `json:"metrics"`
+	RecordedOn string      `json:"recordedOn"`
+}
+
+type WeeklyReport struct {
+	DaysWithData int         `json:"daysWithData"`
+	EndDate      string      `json:"endDate"`
+	Metrics      PageMetrics `json:"metrics"`
+	StartDate    string      `json:"startDate"`
+}
+
 type FacebookPost struct {
 	Comments  int64  `json:"comments"`
 	CreatedAt string `json:"createdAt"`

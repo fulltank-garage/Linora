@@ -19,7 +19,7 @@ import {
 import { LoadingDots } from "../components/LoadingDots";
 import { CountUp } from "../components/CountUp";
 import { useNavigate } from "react-router-dom";
-import type { AnalysisReport, FacebookPageSummary } from "@linora/shared";
+import type { AnalysisReport, FacebookPageSummary, WeeklyReport } from "@linora/shared";
 import { ComplianceLinks } from "../components/ComplianceLinks";
 
 type DashboardPageProps = {
@@ -28,6 +28,7 @@ type DashboardPageProps = {
   onDisconnect: () => Promise<void>;
   page: FacebookPageSummary;
   report: AnalysisReport;
+  weeklyReport: WeeklyReport | null;
 };
 
 function getHealthLabel(score: number) {
@@ -42,7 +43,17 @@ function formatMetric(value: number | undefined) {
   return new Intl.NumberFormat("th-TH").format(value);
 }
 
-export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, report }: DashboardPageProps) {
+function formatWeeklyDateRange(startDate: string, endDate: string) {
+  const formatter = new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Bangkok",
+  });
+  return `${formatter.format(new Date(`${startDate}T00:00:00+07:00`))} - ${formatter.format(new Date(`${endDate}T00:00:00+07:00`))}`;
+}
+
+export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, report, weeklyReport }: DashboardPageProps) {
   const navigate = useNavigate();
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [managementAction, setManagementAction] = useState<"delete" | "disconnect" | null>(null);
@@ -68,10 +79,11 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
     active: day.day === postingTimeInsight?.bestDay && day.postCount > 0,
     value: day.postCount > 0 ? Math.max(16, Math.round((day.averageEngagement / maxAverageEngagement) * 62)) : 5,
   }));
+  const weeklyMetrics = weeklyReport?.metrics;
   const latestReportMetrics = [
-    { icon: <VisibilityOutlined />, label: "การเข้าถึง", value: formatMetric(report.metrics?.reach) },
-    { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: formatMetric(report.metrics?.engagements) },
-    { icon: <AdsClick />, label: "คลิกทั้งหมด", value: formatMetric(report.metrics?.clicks) },
+    { icon: <VisibilityOutlined />, label: "การเข้าถึง", value: formatMetric(weeklyMetrics?.reach) },
+    { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: formatMetric(weeklyMetrics?.engagements) },
+    { icon: <AdsClick />, label: "คลิกทั้งหมด", value: formatMetric(weeklyMetrics?.clicks) },
   ];
 
   useEffect(() => {
@@ -452,10 +464,13 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                   รายงานล่าสุด
                 </Typography>
                 <Typography color="text.primary" sx={{ fontSize: 18, fontWeight: 900, lineHeight: 1.25, mt: 0.5 }}>
-                  รายงานรายสัปดาห์
+                  รายงาน 7 วันล่าสุด
                 </Typography>
                 <Typography color="text.secondary" sx={{ fontSize: 14, fontWeight: 600 }}>
-                  12-18 พ.ค. 2567
+                  {weeklyReport ? formatWeeklyDateRange(weeklyReport.startDate, weeklyReport.endDate) : "กำลังโหลดช่วงรายงาน"}
+                </Typography>
+                <Typography color="text.secondary" sx={{ fontSize: 12, fontWeight: 700 }}>
+                  {weeklyReport ? `มีข้อมูล ${weeklyReport.daysWithData}/7 วัน` : "ยังไม่มีข้อมูลรายวัน"}
                 </Typography>
               </Box>
               <Stack spacing={1.15}>
@@ -466,7 +481,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                       alignItems: "center",
                       display: "grid",
                       gap: 1,
-                      gridTemplateColumns: "24px 1fr auto auto",
+                      gridTemplateColumns: "24px 1fr auto",
                     }}
                   >
                     <Box
@@ -484,9 +499,6 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                     </Typography>
                     <Typography color="text.primary" sx={{ fontSize: 17, fontWeight: 900 }}>
                       {metric.value}
-                    </Typography>
-                    <Typography color="text.secondary" sx={{ fontSize: 12, fontWeight: 700 }}>
-                      ล่าสุด
                     </Typography>
                   </Box>
                 ))}

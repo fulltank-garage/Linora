@@ -46,6 +46,13 @@ export type PostingTimeInsight = {
   days: PostingDayInsight[];
 };
 
+export type WeeklyReport = {
+  startDate: string;
+  endDate: string;
+  daysWithData: number;
+  metrics: PageMetrics;
+};
+
 export type AnalysisReport = {
   id: string;
   pageName: string;

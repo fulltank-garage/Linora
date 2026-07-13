@@ -52,7 +52,8 @@ func (c *IntegrationController) ListPages(ctx *gin.Context) {
 }
 
 func (c *IntegrationController) Dashboard(ctx *gin.Context) {
-	result, err := c.page.Dashboard(ctx.Request.Context(), middleware.LineUserID(ctx))
+	ownerID := middleware.LineUserID(ctx)
+	result, err := c.page.Dashboard(ctx.Request.Context(), ownerID)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err == repositories.ErrNotFound {
@@ -61,7 +62,25 @@ func (c *IntegrationController) Dashboard(ctx *gin.Context) {
 		ctx.JSON(status, gin.H{"error": "ไม่พบเพจที่กำลังใช้งาน"})
 		return
 	}
-	ctx.JSON(http.StatusOK, result)
+	weekly, err := c.page.WeeklyReport(ctx.Request.Context(), ownerID, result.Page.PageID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถสร้างรายงาน 7 วันได้"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"page": result.Page, "report": result.Report, "weeklyReport": weekly})
+}
+
+func (c *IntegrationController) WeeklyReport(ctx *gin.Context) {
+	weekly, err := c.page.WeeklyReport(ctx.Request.Context(), middleware.LineUserID(ctx), ctx.Param("pageID"))
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == repositories.ErrNotFound {
+			status = http.StatusNotFound
+		}
+		ctx.JSON(status, gin.H{"error": "ไม่พบข้อมูลรายงาน 7 วันของเพจ"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"weeklyReport": weekly})
 }
 
 func (c *IntegrationController) SelectPage(ctx *gin.Context) {
