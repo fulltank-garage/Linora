@@ -16,6 +16,7 @@ import {
   deleteFacebookPageData,
   disconnectFacebookPage,
   getConnectedFacebookPages,
+  getSavedFacebookDashboard,
   selectConnectedFacebookPage,
   startFacebookLogin,
   syncFacebookPage,
@@ -57,10 +58,15 @@ function AppRoutes() {
     void initializeLineIdentity()
       .then(async (ready) => {
         if (!ready || !isActive) return;
-        const pages = await getConnectedFacebookPages();
+        const [pages, dashboard] = await Promise.all([getConnectedFacebookPages(), getSavedFacebookDashboard()]);
         if (!isActive) return;
         setFacebookPages(pages);
         setHasFacebookLogin(pages.length > 0);
+        if (dashboard) {
+          setSelectedPage(dashboard.page);
+          setLatestReport(dashboard.report);
+          setHasPagePermission(true);
+        }
       })
       .catch(() => {
         if (isActive) clearFacebookSession();

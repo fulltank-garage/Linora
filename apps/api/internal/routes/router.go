@@ -21,6 +21,7 @@ func NewRouter(cfg config.Config, analysisService *services.AnalysisService, fac
 		integrationController := controllers.NewIntegrationController(pageService, lineService, cfg.Line.ChannelSecret)
 		facebook := router.Group("/api/facebook", requireLineIdentity)
 		facebook.POST("/connections", integrationController.ConnectPage)
+		facebook.GET("/dashboard", integrationController.Dashboard)
 		facebook.GET("/pages", integrationController.ListPages)
 		facebook.POST("/pages/:pageID/select", integrationController.SelectPage)
 		facebook.POST("/pages/:pageID/sync", integrationController.SyncPage)

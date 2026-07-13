@@ -51,6 +51,19 @@ func (c *IntegrationController) ListPages(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"pages": pages})
 }
 
+func (c *IntegrationController) Dashboard(ctx *gin.Context) {
+	result, err := c.page.Dashboard(ctx.Request.Context(), middleware.LineUserID(ctx))
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == repositories.ErrNotFound {
+			status = http.StatusNotFound
+		}
+		ctx.JSON(status, gin.H{"error": "ไม่พบเพจที่กำลังใช้งาน"})
+		return
+	}
+	ctx.JSON(http.StatusOK, result)
+}
+
 func (c *IntegrationController) SelectPage(ctx *gin.Context) {
 	result, err := c.page.Select(ctx.Request.Context(), middleware.LineUserID(ctx), ctx.Param("pageID"))
 	if err != nil {

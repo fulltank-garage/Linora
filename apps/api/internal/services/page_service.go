@@ -76,6 +76,30 @@ func (s *PageService) List(ctx context.Context, ownerID string) ([]models.Facebo
 	return pages, nil
 }
 
+func (s *PageService) Dashboard(ctx context.Context, ownerID string) (models.ConnectedPageResponse, error) {
+	pageID, err := s.store.GetLinkedPage(ctx, ownerID)
+	if err != nil {
+		return models.ConnectedPageResponse{}, err
+	}
+	connection, err := s.store.GetConnection(ctx, ownerID, pageID)
+	if err != nil {
+		return models.ConnectedPageResponse{}, err
+	}
+	report, err := s.LatestReport(ctx, ownerID, pageID)
+	if err != nil {
+		return models.ConnectedPageResponse{}, err
+	}
+	return models.ConnectedPageResponse{
+		Page: models.FacebookPage{
+			Category: connection.Category,
+			IsActive: true,
+			PageID:   connection.PageID,
+			PageName: connection.PageName,
+		},
+		Report: report,
+	}, nil
+}
+
 func (s *PageService) Select(ctx context.Context, ownerID string, pageID string) (models.ConnectedPageResponse, error) {
 	connection, err := s.store.GetConnection(ctx, ownerID, pageID)
 	if err != nil {

@@ -37,6 +37,16 @@ export async function getConnectedFacebookPages() {
   return response.data.pages;
 }
 
+export async function getSavedFacebookDashboard() {
+  try {
+    const response = await api.get<{ page: FacebookPageSummary; report: AnalysisReport }>("/api/facebook/dashboard");
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) return null;
+    throw error;
+  }
+}
+
 export async function selectConnectedFacebookPage(pageId: string) {
   const response = await api.post<{ page: FacebookPageSummary; report: AnalysisReport }>(`/api/facebook/pages/${pageId}/select`);
   return response.data;
