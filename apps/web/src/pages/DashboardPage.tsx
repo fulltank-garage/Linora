@@ -528,7 +528,6 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
       </Stack>
       <Box
         sx={{
-          backdropFilter: "blur(18px)",
           background:
             "linear-gradient(to top, rgba(248, 246, 240, 0.96) 0%, rgba(248, 246, 240, 0.78) 62%, rgba(248, 246, 240, 0) 100%)",
           borderTop: 0,
@@ -540,10 +539,6 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
           px: 2,
           position: "fixed",
           right: 0,
-          transform: "translate3d(0, 0, 0)",
-          WebkitTransform: "translate3d(0, 0, 0)",
-          willChange: "transform",
-          WebkitBackdropFilter: "blur(18px)",
           zIndex: 20,
         }}
       >
