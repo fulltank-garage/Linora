@@ -49,7 +49,7 @@ func (s *AnalysisService) AnalyzePageSnapshot(page models.FacebookPage, snapshot
 	return models.AnalysisReport{
 		ID:                fmt.Sprintf("facebook-%d", time.Now().UnixNano()),
 		PageName:          page.PageName,
-		Summary:           fmt.Sprintf("วิเคราะห์จาก %d โพสต์ล่าสุด: มีปฏิสัมพันธ์ %d ครั้ง และเข้าถึงโดยประมาณ %d ครั้ง", len(snapshot.Posts), snapshot.Metrics.Engagements, snapshot.Metrics.Reach),
+		Summary:           fmt.Sprintf("วิเคราะห์จาก %d โพสต์ล่าสุด: มีปฏิสัมพันธ์รวม %d ครั้ง", len(snapshot.Posts), snapshot.Metrics.Engagements),
 		HealthScore:       score,
 		TopPosts:          []models.TopPost{{PostID: best.ID, Reason: postReason, Recommendation: postRecommendation}},
 		ImportantComments: important,

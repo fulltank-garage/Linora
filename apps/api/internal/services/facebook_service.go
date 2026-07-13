@@ -313,14 +313,8 @@ func (s *FacebookService) FetchPageSnapshot(ctx context.Context, pageID string, 
 		snapshot.Metrics.Engagements += item.Comments + item.Reactions + item.Shares
 	}
 
-	insights, _ := s.fetchInsights(ctx, pageID, accessToken)
-	snapshot.Metrics.Impressions = insights.Impressions
-	snapshot.Metrics.Reach = insights.Reach
-	if snapshot.Metrics.Reach == 0 {
-		snapshot.Metrics.Reach = snapshot.Metrics.Engagements
-	}
-	if snapshot.Metrics.Impressions == 0 {
-		snapshot.Metrics.Impressions = snapshot.Metrics.Reach
+	if insights, err := s.fetchInsights(ctx, pageID, accessToken); err == nil {
+		snapshot.Metrics.Impressions = insights.Impressions
 	}
 
 	for _, post := range snapshot.Posts[:min(len(snapshot.Posts), 5)] {
@@ -376,7 +370,6 @@ func (s *FacebookService) fetchInsights(ctx context.Context, pageID string, acce
 		switch metric.Name {
 		case "page_impressions":
 			metrics.Impressions = value
-			metrics.Reach = value
 		case "page_post_engagements":
 			metrics.Engagements = value
 		}
