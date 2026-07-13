@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Drawer, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import {
   AccessTime,
-  AdsClick,
   AutoAwesome,
   BarChart,
   ChatBubbleOutlined,
@@ -83,7 +82,6 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
   const latestReportMetrics = [
     { icon: <VisibilityOutlined />, label: "การเข้าถึง", value: formatMetric(weeklyMetrics?.reach) },
     { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: formatMetric(weeklyMetrics?.engagements) },
-    { icon: <AdsClick />, label: "คลิกทั้งหมด", value: formatMetric(weeklyMetrics?.clicks) },
   ];
 
   useEffect(() => {
