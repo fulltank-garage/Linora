@@ -113,6 +113,7 @@ export function PageSelectPage({
       </Stack>
       <Box
         sx={{
+          backdropFilter: "blur(18px)",
           background:
             "linear-gradient(to top, rgba(248, 246, 240, 0.96) 0%, rgba(248, 246, 240, 0.78) 62%, rgba(248, 246, 240, 0) 100%)",
           borderTop: 0,
@@ -124,6 +125,10 @@ export function PageSelectPage({
           px: 2,
           position: "fixed",
           right: 0,
+          transform: "translate3d(0, 0, 0)",
+          WebkitTransform: "translate3d(0, 0, 0)",
+          willChange: "transform",
+          WebkitBackdropFilter: "blur(18px)",
           zIndex: 20,
         }}
       >
