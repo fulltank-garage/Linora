@@ -51,6 +51,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
   const [analysisError, setAnalysisError] = useState("");
   const [scoreAnimationKey, setScoreAnimationKey] = useState(0);
   const [visibleScore, setVisibleScore] = useState(0);
+  const [isScoreAnimating, setIsScoreAnimating] = useState(false);
   const healthLabel = getHealthLabel(report.healthScore);
   const bestPostingTime = report.bestPostingTimes[0] ?? "19:00";
   const importantComment = report.importantComments[0];
@@ -70,9 +71,13 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
   ];
 
   useEffect(() => {
+    setIsScoreAnimating(false);
     setVisibleScore(0);
-    const frame = window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => setVisibleScore(report.healthScore));
+    let frame = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => {
+        setIsScoreAnimating(true);
+        setVisibleScore(report.healthScore);
+      });
     });
 
     return () => window.cancelAnimationFrame(frame);
@@ -252,7 +257,9 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                       gridArea: "1 / 1",
                       transform: "rotate(-96deg) !important",
                       "& .MuiCircularProgress-circle": {
-                        transition: "stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1)",
+                        transition: isScoreAnimating
+                          ? "stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1)"
+                          : "none",
                       },
                     }}
                   />
