@@ -23,6 +23,19 @@ type ImportantComment struct {
 	SuggestedReply string `json:"suggestedReply"`
 }
 
+type PostingDayInsight struct {
+	AverageEngagement int64  `json:"averageEngagement"`
+	Day               string `json:"day"`
+	PostCount         int    `json:"postCount"`
+}
+
+type PostingTimeInsight struct {
+	BasedOnPosts int                 `json:"basedOnPosts"`
+	BestDay      string              `json:"bestDay"`
+	BestTime     string              `json:"bestTime"`
+	Days         []PostingDayInsight `json:"days"`
+}
+
 type AnalysisReport struct {
 	ID                     string             `json:"id"`
 	PageName               string             `json:"pageName"`
@@ -32,6 +45,7 @@ type AnalysisReport struct {
 	ImportantComments      []ImportantComment `json:"importantComments"`
 	ContentRecommendations []string           `json:"contentRecommendations"`
 	BestPostingTimes       []string           `json:"bestPostingTimes"`
+	PostingTimeInsight     PostingTimeInsight `json:"postingTimeInsight"`
 	LineSummaryMessage     string             `json:"lineSummaryMessage"`
 	Metrics                PageMetrics        `json:"metrics"`
 	CreatedAt              string             `json:"createdAt"`

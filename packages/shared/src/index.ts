@@ -33,6 +33,19 @@ export type PageMetrics = {
   reach: number;
 };
 
+export type PostingDayInsight = {
+  day: string;
+  postCount: number;
+  averageEngagement: number;
+};
+
+export type PostingTimeInsight = {
+  basedOnPosts: number;
+  bestDay: string;
+  bestTime: string;
+  days: PostingDayInsight[];
+};
+
 export type AnalysisReport = {
   id: string;
   pageName: string;
@@ -42,6 +55,7 @@ export type AnalysisReport = {
   importantComments: ImportantComment[];
   contentRecommendations: string[];
   bestPostingTimes: string[];
+  postingTimeInsight?: PostingTimeInsight;
   lineSummaryMessage: string;
   createdAt: string;
   metrics?: PageMetrics;

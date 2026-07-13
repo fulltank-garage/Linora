@@ -53,17 +53,21 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
   const [visibleScore, setVisibleScore] = useState(0);
   const [isScoreAnimating, setIsScoreAnimating] = useState(false);
   const healthLabel = getHealthLabel(report.healthScore);
-  const bestPostingTime = report.bestPostingTimes[0] ?? "19:00";
+  const postingTimeInsight = report.postingTimeInsight;
+  const hasPostingTimeData = Boolean(postingTimeInsight && postingTimeInsight.basedOnPosts > 0);
+  const bestPostingTime = postingTimeInsight?.bestTime || "ยังไม่มีข้อมูล";
   const importantComment = report.importantComments[0];
-  const postingBars = [
-    { day: "จ.", value: 44 },
-    { day: "อ.", value: 52 },
-    { day: "พ.", value: 68, active: true },
-    { day: "พฤ.", value: 50 },
-    { day: "ศ.", value: 54 },
-    { day: "ส.", value: 48 },
-    { day: "อา.", value: 58 },
-  ];
+  const postingDays = postingTimeInsight?.days ?? ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."].map((day) => ({
+    averageEngagement: 0,
+    day,
+    postCount: 0,
+  }));
+  const maxAverageEngagement = Math.max(...postingDays.map((day) => day.averageEngagement), 1);
+  const postingBars = postingDays.map((day) => ({
+    ...day,
+    active: day.day === postingTimeInsight?.bestDay && day.postCount > 0,
+    value: day.postCount > 0 ? Math.max(16, Math.round((day.averageEngagement / maxAverageEngagement) * 62)) : 5,
+  }));
   const latestReportMetrics = [
     { icon: <VisibilityOutlined />, label: "การเข้าถึง", value: formatMetric(report.metrics?.reach) },
     { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: formatMetric(report.metrics?.engagements) },
@@ -365,6 +369,11 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                   {bestPostingTime}
                 </Typography>
               </Box>
+              <Typography color="text.secondary" sx={{ fontSize: 12, fontWeight: 700, lineHeight: 1.35 }}>
+                {hasPostingTimeData
+                  ? `อ้างอิงจากโพสต์ล่าสุด ${postingTimeInsight?.basedOnPosts} โพสต์`
+                  : "วิเคราะห์เพจอีกครั้งเพื่อคำนวณจากโพสต์จริง"}
+              </Typography>
               <Box
                 sx={{
                   alignItems: "end",
@@ -401,7 +410,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                           whiteSpace: "nowrap",
                         }}
                       >
-                        วันนี้
+                        ดีที่สุด
                       </Typography>
                     ) : null}
                     <Box

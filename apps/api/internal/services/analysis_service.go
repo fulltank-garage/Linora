@@ -41,6 +41,11 @@ func (s *AnalysisService) AnalyzePageSnapshot(page models.FacebookPage, snapshot
 		postReason = fmt.Sprintf("โพสต์นี้มีปฏิสัมพันธ์รวม %d ครั้ง จึงเป็นโพสต์ที่ทำผลงานเด่นในรอบล่าสุด", best.Reactions+best.Comments+best.Shares)
 		postRecommendation = "ต่อยอดหัวข้อของโพสต์นี้ และเพิ่ม CTA ที่ชัดเจนเพื่อให้ลูกค้าทัก LINE ได้ทันที"
 	}
+	postingTimeInsight := calculatePostingTimeInsight(snapshot.Posts)
+	bestPostingTimes := []string(nil)
+	if postingTimeInsight.BestTime != "" {
+		bestPostingTimes = []string{postingTimeInsight.BestTime}
+	}
 	return models.AnalysisReport{
 		ID:                fmt.Sprintf("facebook-%d", time.Now().UnixNano()),
 		PageName:          page.PageName,
@@ -53,7 +58,8 @@ func (s *AnalysisService) AnalyzePageSnapshot(page models.FacebookPage, snapshot
 			"นำคำถามจากลูกค้ามาทำเป็นโพสต์ FAQ เพื่อลดเวลาตอบซ้ำ",
 			"ติดตามผลหลังโพสต์และเปรียบเทียบแนวโน้มทุกสัปดาห์",
 		},
-		BestPostingTimes:   []string{"18:00 - 20:00", "11:00 - 13:00"},
+		BestPostingTimes:   bestPostingTimes,
+		PostingTimeInsight: postingTimeInsight,
 		LineSummaryMessage: fmt.Sprintf("สรุปเพจ %s\nคะแนนภาพรวม %d/100\nปฏิสัมพันธ์ล่าสุด %d ครั้ง", page.PageName, score, snapshot.Metrics.Engagements),
 		Metrics:            snapshot.Metrics,
 		CreatedAt:          time.Now().Format(time.RFC3339),
@@ -92,13 +98,73 @@ func (s *AnalysisService) AnalyzeManualInput(input models.ManualAnalysisInput) (
 			"ทำโพสต์โปรโมชันพร้อม call-to-action ที่ตอบได้ทันทีใน LINE",
 			"นำคำถามจากคอมเมนต์มาทำเป็นคอนเทนต์ FAQ",
 		},
-		BestPostingTimes:   []string{"18:00 - 20:00", "11:00 - 13:00"},
+		BestPostingTimes:   nil,
 		LineSummaryMessage: fmt.Sprintf("สรุปเพจวันนี้จาก Linora\n\nคะแนนภาพรวม: %d/100\n\nคำแนะนำ: เพิ่ม CTA ให้ชัดและตอบคอมเมนต์สำคัญให้เร็วขึ้น", score),
 		Metrics: models.PageMetrics{
 			Engagements: int64(input.Likes + input.Comments + input.Shares),
 		},
 		CreatedAt: time.Now().Format(time.RFC3339),
 	}, nil
+}
+
+func calculatePostingTimeInsight(posts []models.FacebookPost) models.PostingTimeInsight {
+	dayLabels := []string{"จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."}
+	insight := models.PostingTimeInsight{Days: make([]models.PostingDayInsight, len(dayLabels))}
+	type aggregate struct {
+		engagements int64
+		postCount   int
+	}
+	days := make([]aggregate, len(dayLabels))
+	timeSlots := make([]aggregate, 8)
+	location := time.FixedZone("Asia/Bangkok", 7*60*60)
+
+	for _, post := range posts {
+		postedAt, err := time.Parse(time.RFC3339, post.CreatedAt)
+		if err != nil {
+			continue
+		}
+		engagements := post.Reactions + post.Comments + post.Shares
+		dayIndex := (int(postedAt.In(location).Weekday()) + 6) % len(dayLabels)
+		days[dayIndex].engagements += engagements
+		days[dayIndex].postCount++
+		timeSlot := postedAt.In(location).Hour() / 3
+		timeSlots[timeSlot].engagements += engagements
+		timeSlots[timeSlot].postCount++
+		insight.BasedOnPosts++
+	}
+
+	bestDayAverage := int64(-1)
+	for index, day := range days {
+		average := int64(0)
+		if day.postCount > 0 {
+			average = day.engagements / int64(day.postCount)
+			if average > bestDayAverage {
+				bestDayAverage = average
+				insight.BestDay = dayLabels[index]
+			}
+		}
+		insight.Days[index] = models.PostingDayInsight{
+			AverageEngagement: average,
+			Day:               dayLabels[index],
+			PostCount:         day.postCount,
+		}
+	}
+
+	bestTimeAverage := int64(-1)
+	for slot, item := range timeSlots {
+		if item.postCount == 0 {
+			continue
+		}
+		average := item.engagements / int64(item.postCount)
+		if average <= bestTimeAverage {
+			continue
+		}
+		bestTimeAverage = average
+		startHour := slot * 3
+		insight.BestTime = fmt.Sprintf("%02d:00 - %02d:00", startHour, startHour+2)
+	}
+
+	return insight
 }
 
 func calculateHealthScore(input models.ManualAnalysisInput) int {
