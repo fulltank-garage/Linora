@@ -291,9 +291,6 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                   </Typography>
                 </Stack>
               </Box>
-              <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.45 }}>
-                {report.summary}
-              </Typography>
             </Stack>
           </CardContent>
         </Card>
