@@ -560,10 +560,10 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
               <Box sx={{ alignItems: "center", display: "flex", gap: 1, pr: 5 }}>
                 <Stack spacing={0.55} sx={{ minWidth: 0 }}>
                   <Typography color="text.secondary" sx={{ fontSize: 13, fontWeight: 800 }}>
-                    คำแนะนำจาก Linora
+                    คำแนะนำจาก Linora AI
                   </Typography>
                   <Typography color="text.primary" sx={{ fontSize: 18, fontWeight: 900, lineHeight: 1.25, mt: "10px !important" }}>
-                    {report.topPosts[0]?.reason}
+                    แนวทางคอนเทนต์ที่ควรลอง
                   </Typography>
                 </Stack>
               </Box>
@@ -576,7 +576,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                 }}
               >
                 <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
-                  {report.topPosts[0]?.recommendation}
+                  {report.aiContentRecommendation || "กดเริ่มวิเคราะห์เพจเพื่อให้ Linora AI วิเคราะห์แนวทางคอนเทนต์จากข้อมูลเพจล่าสุด"}
                 </Typography>
               </Box>
             </Stack>

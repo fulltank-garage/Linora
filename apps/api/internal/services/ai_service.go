@@ -32,11 +32,13 @@ func (s *AIService) EnhanceReport(ctx context.Context, report models.AnalysisRep
 	if !s.Enabled() {
 		return report
 	}
-	prompt := fmt.Sprintf(`คุณคือ Linora ผู้ช่วยวิเคราะห์เพจ Facebook ตอบภาษาไทยแบบกระชับ
-ข้อมูลที่อนุญาตให้ใช้: %s
-สร้างคำแนะนำเชิงปฏิบัติ 1 ข้อ ห้ามแต่งตัวเลขหรืออ้างถึงข้อมูลส่วนบุคคล`, mustJSON(report))
+	prompt := fmt.Sprintf(`คุณคือ Linora AI ผู้ช่วยวิเคราะห์คอนเทนต์ Facebook ตอบภาษาไทยแบบกระชับ
+วิเคราะห์เฉพาะข้อมูลโพสต์, engagement, comments และ shares ในรายงานนี้: %s
+เสนอแนวทางคอนเทนต์ 1 ข้อที่ผู้ดูแลเพจนำไปทดลองทำโพสต์ครั้งถัดไปได้จริง โดยอธิบายจากรูปแบบเนื้อหาหรือการมีส่วนร่วมที่พบ
+ห้ามพูดถึงวันหรือเวลาโพสต์ ห้ามแต่งตัวเลข อ้างข้อมูลนอกเหนือจากนี้ หรือรับประกันผลลัพธ์
+ตอบเพียง 1 ประโยค ไม่ต้องใส่หัวข้อหรือ Markdown`, mustJSON(report))
 	if answer, err := s.complete(ctx, prompt); err == nil && answer != "" {
-		report.ContentRecommendations = append([]string{answer}, report.ContentRecommendations...)
+		report.AIContentRecommendation = answer
 	}
 	if report.PostingTimeInsight.BasedOnPosts >= 3 && report.PostingTimeInsight.BestTime != "" {
 		postingTimePrompt := fmt.Sprintf(`คุณคือ Linora AI ผู้ช่วยวิเคราะห์เพจ Facebook ตอบภาษาไทยแบบกระชับ

@@ -44,6 +44,7 @@ type AnalysisReport struct {
 	TopPosts                  []TopPost          `json:"topPosts"`
 	ImportantComments         []ImportantComment `json:"importantComments"`
 	ContentRecommendations    []string           `json:"contentRecommendations"`
+	AIContentRecommendation  string             `json:"aiContentRecommendation"`
 	BestPostingTimes          []string           `json:"bestPostingTimes"`
 	PostingTimeInsight        PostingTimeInsight `json:"postingTimeInsight"`
 	PostingTimeRecommendation string             `json:"postingTimeRecommendation"`

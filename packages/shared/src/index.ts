@@ -61,6 +61,7 @@ export type AnalysisReport = {
   topPosts: TopPost[];
   importantComments: ImportantComment[];
   contentRecommendations: string[];
+  aiContentRecommendation?: string;
   bestPostingTimes: string[];
   postingTimeInsight?: PostingTimeInsight;
   postingTimeRecommendation?: string;
