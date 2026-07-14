@@ -12,6 +12,7 @@ type ManualAnalysisInput struct {
 
 type TopPost struct {
 	PostID         string `json:"postId"`
+	Excerpt        string `json:"excerpt"`
 	Reason         string `json:"reason"`
 	Recommendation string `json:"recommendation"`
 }

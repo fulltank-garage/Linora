@@ -15,6 +15,7 @@ export type FacebookPageSummary = {
 
 export type TopPost = {
   postId: string;
+  excerpt: string;
   reason: string;
   recommendation: string;
 };

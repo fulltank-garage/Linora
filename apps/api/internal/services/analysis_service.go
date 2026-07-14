@@ -51,7 +51,7 @@ func (s *AnalysisService) AnalyzePageSnapshot(page models.FacebookPage, snapshot
 		PageName:          page.PageName,
 		Summary:           fmt.Sprintf("วิเคราะห์จาก %d โพสต์ล่าสุด: มีปฏิสัมพันธ์รวม %d ครั้ง", len(snapshot.Posts), snapshot.Metrics.Engagements),
 		HealthScore:       score,
-		TopPosts:          []models.TopPost{{PostID: best.ID, Reason: postReason, Recommendation: postRecommendation}},
+		TopPosts:          []models.TopPost{{PostID: best.ID, Excerpt: postExcerpt(best.Message), Reason: postReason, Recommendation: postRecommendation}},
 		ImportantComments: important,
 		ContentRecommendations: []string{
 			"ต่อยอดเนื้อหาที่ผู้ติดตามมีส่วนร่วมสูง พร้อม CTA ที่ตอบได้ทันที",
@@ -88,6 +88,7 @@ func (s *AnalysisService) AnalyzeManualInput(input models.ManualAnalysisInput) (
 		TopPosts: []models.TopPost{
 			{
 				PostID:         "manual-post",
+				Excerpt:        postExcerpt(postContent),
 				Reason:         "โพสต์นี้ถูกใช้เป็นข้อมูลตั้งต้นสำหรับการวิเคราะห์แบบ manual",
 				Recommendation: "เพิ่ม call-to-action ให้ชัด และต่อยอดหัวข้อที่มีคนคอมเมนต์มากที่สุด",
 			},
@@ -105,6 +106,19 @@ func (s *AnalysisService) AnalyzeManualInput(input models.ManualAnalysisInput) (
 		},
 		CreatedAt: time.Now().Format(time.RFC3339),
 	}, nil
+}
+
+func postExcerpt(message string) string {
+	const maxLength = 140
+	message = strings.Join(strings.Fields(message), " ")
+	if message == "" {
+		return ""
+	}
+	runes := []rune(message)
+	if len(runes) <= maxLength {
+		return message
+	}
+	return string(runes[:maxLength]) + "..."
 }
 
 func calculatePostingTimeInsight(posts []models.FacebookPost) models.PostingTimeInsight {

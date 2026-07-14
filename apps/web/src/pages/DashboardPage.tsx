@@ -608,6 +608,16 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                   </Typography>
                 )}
               </Box>
+              {report.topPosts[0]?.excerpt ? (
+                <Box sx={{ borderLeft: "3px solid", borderColor: "primary.main", pl: 1.25, pr: 0.5 }}>
+                  <Typography color="primary.main" sx={{ fontSize: 12, fontWeight: 900 }}>
+                    อ้างอิงจากโพสต์เด่น
+                  </Typography>
+                  <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.5, mt: 0.35 }}>
+                    “{report.topPosts[0].excerpt}”
+                  </Typography>
+                </Box>
+              ) : null}
             </Stack>
           </CardContent>
         </Card>
