@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Alert, Box, Button, Card, CardContent, Chip, Drawer, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Drawer, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import {
   AccessTime,
   AutoAwesome,
@@ -16,6 +16,7 @@ import {
   WorkspacePremium,
 } from "@mui/icons-material";
 import { LoadingDots } from "../components/LoadingDots";
+import { CountUp } from "../components/CountUp";
 import { useNavigate } from "react-router-dom";
 import type { AnalysisReport, FacebookPageSummary, WeeklyReport } from "@linora/shared";
 import { ComplianceLinks } from "../components/ComplianceLinks";
@@ -28,6 +29,13 @@ type DashboardPageProps = {
   report: AnalysisReport;
   weeklyReport: WeeklyReport | null;
 };
+
+function getHealthLabel(score: number) {
+  if (score >= 80) return "ดีมาก";
+  if (score >= 65) return "ดี";
+  if (score >= 45) return "ควรปรับปรุง";
+  return "ต้องดูแลเร่งด่วน";
+}
 
 function formatMetric(value: number | undefined) {
   if (!value) return "-";
@@ -51,6 +59,10 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
   const [managementError, setManagementError] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
+  const [scoreAnimationKey, setScoreAnimationKey] = useState(0);
+  const [visibleScore, setVisibleScore] = useState(0);
+  const [isScoreAnimating, setIsScoreAnimating] = useState(false);
+  const healthLabel = getHealthLabel(report.healthScore);
   const postingTimeInsight = report.postingTimeInsight;
   const hasPostingTimeData = Boolean(postingTimeInsight && postingTimeInsight.basedOnPosts > 0);
   const bestPostingTime = postingTimeInsight?.bestTime || "ยังไม่มีข้อมูล";
@@ -71,6 +83,19 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
     { icon: <VisibilityOutlined />, label: "การเข้าถึง", value: formatMetric(weeklyMetrics?.reach) },
     { icon: <ThumbUpOutlined />, label: "การมีส่วนร่วม", value: formatMetric(weeklyMetrics?.engagements) },
   ];
+
+  useEffect(() => {
+    setIsScoreAnimating(false);
+    setVisibleScore(0);
+    let frame = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => {
+        setIsScoreAnimating(true);
+        setVisibleScore(report.healthScore);
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [report.healthScore, scoreAnimationKey]);
 
   async function handleManagementAction(action: "delete" | "disconnect") {
     if (action === "delete" && !window.confirm("ลบข้อมูล Page, รายงาน และตัวเลขวิเคราะห์ทั้งหมดของ Linora ใช่หรือไม่?")) {
@@ -97,6 +122,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
     setIsAnalyzing(true);
     try {
       await onAnalyze();
+      setScoreAnimationKey((key) => key + 1);
     } catch {
       setAnalysisError("ไม่สามารถวิเคราะห์เพจได้ กรุณาลองใหม่อีกครั้ง");
     } finally {
@@ -203,53 +229,67 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
           <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
             <Stack spacing={1}>
               <Typography color="text.secondary" sx={{ fontSize: 13, fontWeight: 800, pr: 5 }}>
-                ภาพรวมโพสต์ล่าสุด
+                ภาพรวมเพจ
               </Typography>
               <Box
                 sx={{
-                  alignItems: "stretch",
-                  display: "grid",
-                  gap: 1,
-                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  alignItems: "center",
+                  display: "flex",
+                  gap: 1.75,
                   mt: "10px !important",
                 }}
               >
                 <Box
                   sx={{
-                    bgcolor: "rgba(15, 148, 117, 0.08)",
-                    borderRadius: 2,
-                    px: 1.5,
-                    py: 1.25,
+                    alignItems: "center",
+                    display: "grid",
+                    flexShrink: 0,
+                    height: 96,
+                    justifyItems: "center",
+                    placeItems: "center",
+                    position: "relative",
+                    width: 96,
                   }}
                 >
-                  <Typography color="text.secondary" sx={{ fontSize: 12, fontWeight: 800 }}>
-                    โพสต์ที่วิเคราะห์
-                  </Typography>
-                  <Typography color="primary.main" sx={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1, mt: 0.5 }}>
-                    {postingTimeInsight?.basedOnPosts ?? 0}
-                  </Typography>
-                  <Typography color="text.secondary" sx={{ fontSize: 12, fontWeight: 700 }}>
-                    โพสต์ล่าสุด
-                  </Typography>
+                  <CircularProgress
+                    size={96}
+                    thickness={4}
+                    value={100}
+                    variant="determinate"
+                    sx={{ color: "rgba(15, 148, 117, 0.12)", gridArea: "1 / 1" }}
+                  />
+                  <CircularProgress
+                    size={96}
+                    thickness={4}
+                    value={visibleScore}
+                    variant="determinate"
+                    sx={{
+                      color: "primary.main",
+                      gridArea: "1 / 1",
+                      transform: "rotate(-96deg) !important",
+                      "& .MuiCircularProgress-circle": {
+                        transition: isScoreAnimating ? "stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1)" : "none",
+                      },
+                    }}
+                  />
+                  <Stack spacing={0} sx={{ alignItems: "center", gridArea: "1 / 1" }}>
+                    <Typography color="primary.main" sx={{ fontSize: 30, fontWeight: 900, lineHeight: 1 }}>
+                      <CountUp duration={1.2} from={0} key={`${report.healthScore}-${scoreAnimationKey}`} to={report.healthScore} />
+                    </Typography>
+                    <Typography color="text.secondary" sx={{ fontSize: 13, fontWeight: 700 }}>/100</Typography>
+                  </Stack>
                 </Box>
-                <Box
-                  sx={{
-                    bgcolor: "rgba(15, 148, 117, 0.08)",
-                    borderRadius: 2,
-                    px: 1.5,
-                    py: 1.25,
-                  }}
-                >
-                  <Typography color="text.secondary" sx={{ fontSize: 12, fontWeight: 800 }}>
-                    การมีส่วนร่วม
+                <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                  <Typography color="text.secondary" sx={{ fontSize: 13, fontWeight: 800 }}>
+                    คะแนนประเมินของ Linora
                   </Typography>
-                  <Typography color="primary.main" sx={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1, mt: 0.5 }}>
-                    {formatMetric(report.metrics?.engagements)}
+                  <Typography color="primary.main" sx={{ fontSize: 20, fontWeight: 900, lineHeight: 1.15 }}>
+                    {healthLabel}
                   </Typography>
-                  <Typography color="text.secondary" sx={{ fontSize: 12, fontWeight: 700 }}>
-                    reactions, comments และ shares
+                  <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.45 }}>
+                    อิงจาก {postingTimeInsight?.basedOnPosts ?? 0} โพสต์ล่าสุด และปฏิสัมพันธ์ {formatMetric(report.metrics?.engagements)} ครั้ง
                   </Typography>
-                </Box>
+                </Stack>
               </Box>
               <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.45 }}>
                 {report.summary}
