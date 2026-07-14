@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/fulltank-garage/linora/apps/api/internal/config"
+	"github.com/fulltank-garage/linora/apps/api/internal/models"
 	"github.com/fulltank-garage/linora/apps/api/internal/repositories"
 )
 
@@ -70,14 +71,18 @@ func (s *LineService) Chat(ctx context.Context, lineUserID string, message strin
 	pageID, err := s.store.GetLinkedPage(ctx, lineUserID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrNotFound) {
-			return "กรุณาเลือกเพจใน Linora ก่อนครับ", nil
+			return noSelectedPageMessage(), nil
 		}
 		return "", err
 	}
 	report, err := s.store.GetLatestReport(ctx, lineUserID, pageID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrNotFound) {
-			return "เพจที่เลือกยังไม่มีรายงาน กรุณากดเริ่มวิเคราะห์เพจก่อนครับ", nil
+			pageName := ""
+			if connection, connectionErr := s.store.GetConnection(ctx, lineUserID, pageID); connectionErr == nil {
+				pageName = connection.PageName
+			}
+			return analysisPreparingMessage(&models.AnalysisReport{PageName: pageName}), nil
 		}
 		return "", err
 	}

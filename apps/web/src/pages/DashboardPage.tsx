@@ -15,14 +15,12 @@ import {
   VisibilityOutlined,
   WorkspacePremium,
 } from "@mui/icons-material";
-import { LoadingDots } from "../components/LoadingDots";
 import { CountUp } from "../components/CountUp";
 import { useNavigate } from "react-router-dom";
 import type { AnalysisReport, FacebookPageSummary, WeeklyReport } from "@linora/shared";
 import { ComplianceLinks } from "../components/ComplianceLinks";
 
 type DashboardPageProps = {
-  onAnalyze: () => Promise<void>;
   onDeleteData: () => Promise<void>;
   onDisconnect: () => Promise<void>;
   page: FacebookPageSummary;
@@ -52,6 +50,24 @@ function formatWeeklyDateRange(startDate: string, endDate: string) {
   return `${formatter.format(new Date(`${startDate}T00:00:00+07:00`))} - ${formatter.format(new Date(`${endDate}T00:00:00+07:00`))}`;
 }
 
+function formatAnalysisUpdatedAt(createdAt: string) {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return "กำลังตรวจสอบเวลาอัปเดต";
+
+  const parts = new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    month: "long",
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+
+  return `${part("day")} ${part("month")} ${part("year")} เวลา ${part("hour")}:${part("minute")} น.`;
+}
+
 function getPostingRecommendationSections(recommendation: string) {
   const sections = recommendation
     .split(/\n\s*(?=\d+[.)]\s*)/)
@@ -72,13 +88,11 @@ function getContentGuidanceSections(recommendation: string) {
     });
 }
 
-export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, report, weeklyReport }: DashboardPageProps) {
+export function DashboardPage({ onDeleteData, onDisconnect, page, report, weeklyReport }: DashboardPageProps) {
   const navigate = useNavigate();
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [managementAction, setManagementAction] = useState<"delete" | "disconnect" | null>(null);
   const [managementError, setManagementError] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisError, setAnalysisError] = useState("");
   const [scoreAnimationKey, setScoreAnimationKey] = useState(0);
   const [visibleScore, setVisibleScore] = useState(0);
   const [isScoreAnimating, setIsScoreAnimating] = useState(false);
@@ -141,19 +155,6 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
       setManagementError("ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     } finally {
       setManagementAction(null);
-    }
-  }
-
-  async function handlePageAnalysis() {
-    setAnalysisError("");
-    setIsAnalyzing(true);
-    try {
-      await onAnalyze();
-      setScoreAnimationKey((key) => key + 1);
-    } catch {
-      setAnalysisError("ไม่สามารถวิเคราะห์เพจได้ กรุณาลองใหม่อีกครั้ง");
-    } finally {
-      setIsAnalyzing(false);
     }
   }
 
@@ -604,7 +605,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                   </Stack>
                 ) : (
                   <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
-                    กดเริ่มวิเคราะห์เพจเพื่อให้ Linora วิเคราะห์แนวทางคอนเทนต์จากข้อมูลเพจล่าสุด
+                    Linora กำลังเตรียมคำแนะนำจากข้อมูลเพจล่าสุดให้ค่ะ
                   </Typography>
                 )}
               </Box>
@@ -645,17 +646,14 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
         }}
       >
         <Stack spacing={1} sx={{ maxWidth: 430, mx: "auto" }}>
-          {analysisError ? <Alert severity="error">{analysisError}</Alert> : null}
-          <Button
-            disabled={isAnalyzing}
-            fullWidth
-            onClick={() => void handlePageAnalysis()}
-            size="large"
-            startIcon={isAnalyzing ? <LoadingDots color="currentColor" size={7} /> : <AutoAwesome />}
-            variant="contained"
-          >
-            {isAnalyzing ? "กรุณารอสักครู่" : "เริ่มวิเคราะห์เพจ"}
-          </Button>
+          <Box aria-live="polite" sx={{ minHeight: 40, textAlign: "center" }}>
+            <Typography color="text.secondary" sx={{ fontSize: 12, fontWeight: 800, lineHeight: 1.35 }}>
+              อัปเดตการวิเคราะห์ล่าสุด
+            </Typography>
+            <Typography color="text.primary" sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1.45, mt: 0.15 }}>
+              {formatAnalysisUpdatedAt(report.createdAt)}
+            </Typography>
+          </Box>
           <Stack direction="row" spacing={1}>
             <Button
               fullWidth

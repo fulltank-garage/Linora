@@ -87,7 +87,12 @@ func (s *PageService) Dashboard(ctx context.Context, ownerID string) (models.Con
 	if err != nil {
 		return models.ConnectedPageResponse{}, err
 	}
-	report, err := s.LatestReport(ctx, ownerID, pageID)
+	// Opening the dashboard is a recovery path too: create a report automatically
+	// when a newly connected Page does not have one yet, or its cached report is stale.
+	report, err := s.latestFreshReport(ctx, ownerID, pageID)
+	if err != nil {
+		report, err = s.Sync(ctx, ownerID, pageID)
+	}
 	if err != nil {
 		return models.ConnectedPageResponse{}, err
 	}

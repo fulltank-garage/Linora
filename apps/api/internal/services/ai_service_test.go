@@ -15,7 +15,7 @@ import (
 func TestAnswerRequiresSelectedPageReport(t *testing.T) {
 	service := &AIService{}
 	answer := service.Answer(context.Background(), nil, "ช่วยคิดหัวข้อโพสต์ร้านกาแฟ")
-	if answer != "กรุณาเลือกเพจใน Linora ก่อนครับ" {
+	if !strings.Contains(answer, "เชื่อมต่อ Facebook") || !strings.Contains(answer, "เลือกเพจ") {
 		t.Fatalf("unexpected answer without selected page: %q", answer)
 	}
 }
@@ -31,7 +31,7 @@ func TestAnswerBuildsDetailedPageStrategyPrompt(t *testing.T) {
 			t.Fatalf("expected one chat message, got %#v", body["messages"])
 		}
 		content := messages[0].(map[string]any)["content"].(string)
-		if !strings.Contains(content, "🎯 แนวทางที่ควรทำ") || !strings.Contains(content, "เว้นบรรทัดว่าง") {
+		if !strings.Contains(content, baseAIBehavior) || !strings.Contains(content, "🎯 แนวทางที่ควรทำ") || !strings.Contains(content, "✅ สรุปพร้อมนำไปใช้") || !strings.Contains(content, "Linora Cafe") {
 			t.Fatalf("expected detailed strategy prompt, got %q", content)
 		}
 		_, _ = writer.Write([]byte(`{"choices":[{"message":{"content":"🎯 แนวทางที่ควรทำ\nโพสต์เรื่องเมนูเด่น\n\n💡 หัวข้อโพสต์ที่น่าลอง\nเมนูที่ลูกค้ากลับมาซ้ำ"}}]}`))
@@ -49,7 +49,7 @@ func TestAnswerBuildsDetailedPageStrategyPrompt(t *testing.T) {
 func TestAnswerKeepsPageQuestionsGrounded(t *testing.T) {
 	service := &AIService{}
 	answer := service.Answer(context.Background(), nil, "สรุปยอดเข้าถึงของเพจฉันให้หน่อย")
-	if answer != "กรุณาเลือกเพจใน Linora ก่อนครับ" {
+	if !strings.Contains(answer, "เชื่อมต่อ Facebook") || !strings.Contains(answer, "เลือกเพจ") {
 		t.Fatalf("expected request to select a page, got %q", answer)
 	}
 
