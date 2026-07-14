@@ -65,6 +65,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
   const healthLabel = getHealthLabel(report.healthScore);
   const postingTimeInsight = report.postingTimeInsight;
   const hasPostingTimeData = Boolean(postingTimeInsight && postingTimeInsight.basedOnPosts > 0);
+  const hasEnoughPostingTimeData = Boolean(postingTimeInsight && postingTimeInsight.basedOnPosts >= 3);
   const bestPostingTime = postingTimeInsight?.bestTime || "ยังไม่มีข้อมูล";
   const importantComment = report.importantComments[0];
   const postingDays = postingTimeInsight?.days ?? ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."].map((day) => ({
@@ -426,7 +427,32 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                     {bar.day}
                   </Typography>
                 </Stack>
-              ))}
+                ))}
+              </Box>
+              <Box
+                sx={{
+                  alignItems: "flex-start",
+                  bgcolor: "rgba(15, 148, 117, 0.07)",
+                  borderRadius: 2,
+                  display: "flex",
+                  gap: 1,
+                  px: 1.25,
+                  py: 1.1,
+                }}
+              >
+                <AutoAwesome sx={{ color: "primary.main", flexShrink: 0, fontSize: 20, mt: 0.1 }} />
+                <Stack spacing={0.25}>
+                  <Typography color="primary.main" sx={{ fontSize: 12, fontWeight: 900 }}>
+                    คำแนะนำจาก Linora AI
+                  </Typography>
+                  <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.45 }}>
+                    {hasEnoughPostingTimeData && report.postingTimeRecommendation
+                      ? report.postingTimeRecommendation
+                      : hasEnoughPostingTimeData
+                        ? "ยังไม่มีคำแนะนำจาก AI ในขณะนี้"
+                        : "ควรสะสมข้อมูลอย่างน้อย 3 โพสต์ก่อน เพื่อให้คำแนะนำมีความน่าเชื่อถือ"}
+                  </Typography>
+                </Stack>
               </Box>
             </Stack>
           </CardContent>

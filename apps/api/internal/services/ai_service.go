@@ -38,6 +38,14 @@ func (s *AIService) EnhanceReport(ctx context.Context, report models.AnalysisRep
 	if answer, err := s.complete(ctx, prompt); err == nil && answer != "" {
 		report.ContentRecommendations = append([]string{answer}, report.ContentRecommendations...)
 	}
+	if report.PostingTimeInsight.BasedOnPosts >= 3 && report.PostingTimeInsight.BestTime != "" {
+		postingTimePrompt := fmt.Sprintf(`คุณคือ Linora AI ผู้ช่วยวิเคราะห์เพจ Facebook ตอบภาษาไทยแบบกระชับ
+ใช้เฉพาะข้อมูลนี้: วันโพสต์ที่ทำผลงานดีที่สุดคือ %s และช่วงเวลาที่มีปฏิสัมพันธ์เฉลี่ยสูงสุดคือ %s จาก %d โพสต์ล่าสุด
+เขียนคำแนะนำให้ผู้ดูแลเพจทดลองโพสต์ 1 ประโยค ห้ามแต่งตัวเลขหรืออ้างถึงข้อมูลอื่น`, report.PostingTimeInsight.BestDay, report.PostingTimeInsight.BestTime, report.PostingTimeInsight.BasedOnPosts)
+		if answer, err := s.complete(ctx, postingTimePrompt); err == nil && answer != "" {
+			report.PostingTimeRecommendation = answer
+		}
+	}
 	return report
 }
 

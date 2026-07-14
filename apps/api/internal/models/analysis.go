@@ -37,16 +37,17 @@ type PostingTimeInsight struct {
 }
 
 type AnalysisReport struct {
-	ID                     string             `json:"id"`
-	PageName               string             `json:"pageName"`
-	Summary                string             `json:"summary"`
-	HealthScore            int                `json:"healthScore"`
-	TopPosts               []TopPost          `json:"topPosts"`
-	ImportantComments      []ImportantComment `json:"importantComments"`
-	ContentRecommendations []string           `json:"contentRecommendations"`
-	BestPostingTimes       []string           `json:"bestPostingTimes"`
-	PostingTimeInsight     PostingTimeInsight `json:"postingTimeInsight"`
-	LineSummaryMessage     string             `json:"lineSummaryMessage"`
-	Metrics                PageMetrics        `json:"metrics"`
-	CreatedAt              string             `json:"createdAt"`
+	ID                        string             `json:"id"`
+	PageName                  string             `json:"pageName"`
+	Summary                   string             `json:"summary"`
+	HealthScore               int                `json:"healthScore"`
+	TopPosts                  []TopPost          `json:"topPosts"`
+	ImportantComments         []ImportantComment `json:"importantComments"`
+	ContentRecommendations    []string           `json:"contentRecommendations"`
+	BestPostingTimes          []string           `json:"bestPostingTimes"`
+	PostingTimeInsight        PostingTimeInsight `json:"postingTimeInsight"`
+	PostingTimeRecommendation string             `json:"postingTimeRecommendation"`
+	LineSummaryMessage        string             `json:"lineSummaryMessage"`
+	Metrics                   PageMetrics        `json:"metrics"`
+	CreatedAt                 string             `json:"createdAt"`
 }

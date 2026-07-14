@@ -63,6 +63,7 @@ export type AnalysisReport = {
   contentRecommendations: string[];
   bestPostingTimes: string[];
   postingTimeInsight?: PostingTimeInsight;
+  postingTimeRecommendation?: string;
   lineSummaryMessage: string;
   createdAt: string;
   metrics?: PageMetrics;
