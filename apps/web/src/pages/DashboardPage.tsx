@@ -52,6 +52,15 @@ function formatWeeklyDateRange(startDate: string, endDate: string) {
   return `${formatter.format(new Date(`${startDate}T00:00:00+07:00`))} - ${formatter.format(new Date(`${endDate}T00:00:00+07:00`))}`;
 }
 
+function getPostingRecommendationSections(recommendation: string) {
+  const sections = recommendation
+    .split(/\n\s*(?=\d+[.)]\s*)/)
+    .map((section) => section.replace(/^\s*\d+[.)]\s*/, "").trim())
+    .filter(Boolean);
+
+  return sections.length >= 2 ? sections.slice(0, 2) : [recommendation.trim()];
+}
+
 export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, report, weeklyReport }: DashboardPageProps) {
   const navigate = useNavigate();
   const [isManagementOpen, setIsManagementOpen] = useState(false);
@@ -66,6 +75,9 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
   const postingTimeInsight = report.postingTimeInsight;
   const hasPostingTimeData = Boolean(postingTimeInsight && postingTimeInsight.basedOnPosts > 0);
   const hasEnoughPostingTimeData = Boolean(postingTimeInsight && postingTimeInsight.basedOnPosts >= 3);
+  const postingRecommendationSections = report.postingTimeRecommendation
+    ? getPostingRecommendationSections(report.postingTimeRecommendation)
+    : [];
   const bestPostingTime = postingTimeInsight?.bestTime || "ยังไม่มีข้อมูล";
   const importantComment = report.importantComments[0];
   const postingDays = postingTimeInsight?.days ?? ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."].map((day) => ({
@@ -429,29 +441,42 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                 </Stack>
                 ))}
               </Box>
-              <Box
-                sx={{
-                  alignItems: "flex-start",
-                  bgcolor: "rgba(15, 148, 117, 0.07)",
-                  borderRadius: 2,
-                  display: "flex",
-                  gap: 1,
-                  px: 1.25,
-                  py: 1.1,
-                }}
-              >
-                <AutoAwesome sx={{ color: "primary.main", flexShrink: 0, fontSize: 20, mt: 0.1 }} />
-                <Stack spacing={0.25}>
-                  <Typography color="primary.main" sx={{ fontSize: 12, fontWeight: 900 }}>
-                    คำแนะนำจาก Linora AI
-                  </Typography>
-                  <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.45 }}>
-                    {hasEnoughPostingTimeData && report.postingTimeRecommendation
-                      ? report.postingTimeRecommendation
-                      : hasEnoughPostingTimeData
+              <Box sx={{ bgcolor: "rgba(15, 148, 117, 0.07)", borderRadius: 0.5, px: 1.25, py: 1.2 }}>
+                <Stack spacing={1.25}>
+                  <Box sx={{ alignItems: "center", display: "flex", gap: 0.75 }}>
+                    <AutoAwesome sx={{ color: "primary.main", fontSize: 20 }} />
+                    <Typography color="primary.main" sx={{ fontSize: 12, fontWeight: 900 }}>
+                      คำแนะนำจาก Linora
+                    </Typography>
+                  </Box>
+                  {hasEnoughPostingTimeData && postingRecommendationSections.length > 0 ? (
+                    <Stack spacing={1.5}>
+                      {postingRecommendationSections.map((section, index) => (
+                        <Box key={`${index}-${section}`} sx={{ alignItems: "flex-start", display: "flex", gap: 1.1 }}>
+                          <Typography
+                            color="primary.main"
+                            sx={{ fontSize: 23, fontWeight: 900, lineHeight: 1, minWidth: 16, pt: 0.1 }}
+                          >
+                            {index + 1}
+                          </Typography>
+                          <Stack spacing={0.35} sx={{ minWidth: 0 }}>
+                            <Typography color="text.primary" sx={{ fontSize: 13, fontWeight: 900, lineHeight: 1.3 }}>
+                              {index === 0 ? "อ่านแนวโน้ม" : "แนะนำให้ลอง"}
+                            </Typography>
+                            <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.5 }}>
+                              {section}
+                            </Typography>
+                          </Stack>
+                        </Box>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: 1.5 }}>
+                      {hasEnoughPostingTimeData
                         ? "ยังไม่มีคำแนะนำจาก AI ในขณะนี้"
                         : "ควรสะสมข้อมูลอย่างน้อย 3 โพสต์ก่อน เพื่อให้คำแนะนำมีความน่าเชื่อถือ"}
-                  </Typography>
+                    </Typography>
+                  )}
                 </Stack>
               </Box>
             </Stack>
