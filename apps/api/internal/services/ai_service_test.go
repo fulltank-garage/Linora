@@ -5,10 +5,53 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/fulltank-garage/linora/apps/api/internal/config"
+	"github.com/fulltank-garage/linora/apps/api/internal/models"
 )
+
+func TestAnswerUsesGeneralModeWithoutPageReport(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		messages, ok := body["messages"].([]any)
+		if !ok || len(messages) != 1 {
+			t.Fatalf("expected one chat message, got %#v", body["messages"])
+		}
+		content := messages[0].(map[string]any)["content"].(string)
+		if !strings.Contains(content, "คำถามทั่วไป") {
+			t.Fatalf("expected general chat prompt, got %q", content)
+		}
+		_, _ = writer.Write([]byte(`{"choices":[{"message":{"content":"ลองทำโพสต์แบบคำถามสั้น ๆ"}}]}`))
+	}))
+	defer server.Close()
+
+	service := &AIService{config: config.AIConfig{APIKey: "key", BaseURL: server.URL, Model: "test", Provider: "deepseek"}, http: server.Client()}
+	answer := service.Answer(context.Background(), nil, "ช่วยคิดหัวข้อโพสต์ร้านกาแฟ")
+	if !strings.Contains(answer, "คำแนะนำทั่วไป") || !strings.Contains(answer, "โพสต์แบบคำถาม") {
+		t.Fatalf("unexpected general answer: %q", answer)
+	}
+}
+
+func TestAnswerKeepsPageDataQuestionsGrounded(t *testing.T) {
+	service := &AIService{}
+	answer := service.Answer(context.Background(), nil, "สรุปยอดเข้าถึงของเพจฉันให้หน่อย")
+	if !strings.Contains(answer, "เชื่อมเพจ") {
+		t.Fatalf("expected request for page analysis, got %q", answer)
+	}
+
+	report := &models.AnalysisReport{PageName: "Linora Demo", Summary: "มีข้อมูลล่าสุด"}
+	if !isPageDataQuestion("รายงานของเพจฉันเป็นอย่างไร") || isPageDataQuestion("ช่วยคิดหัวข้อโพสต์ร้านกาแฟ") {
+		t.Fatal("page data question classification is incorrect")
+	}
+	if got := service.Answer(context.Background(), report, ""); got == "" {
+		t.Fatal("expected empty questions to return guidance")
+	}
+}
 
 func TestCompleteDeepSeekUsesChatCompletions(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {

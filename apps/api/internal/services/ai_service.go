@@ -60,10 +60,20 @@ func (s *AIService) EnhanceReport(ctx context.Context, report models.AnalysisRep
 	return report
 }
 
-func (s *AIService) Answer(ctx context.Context, report models.AnalysisReport, question string) string {
+func (s *AIService) Answer(ctx context.Context, report *models.AnalysisReport, question string) string {
 	question = strings.TrimSpace(question)
 	if question == "" {
-		return "พิมพ์คำถามเกี่ยวกับผลวิเคราะห์เพจได้เลยครับ"
+		return "พิมพ์คำถามเกี่ยวกับเพจ หรือขอไอเดียคอนเทนต์ได้เลยครับ"
+	}
+	if isPageDataQuestion(question) {
+		return s.answerFromReport(ctx, report, question)
+	}
+	return s.answerGeneral(ctx, question)
+}
+
+func (s *AIService) answerFromReport(ctx context.Context, report *models.AnalysisReport, question string) string {
+	if report == nil {
+		return "หากต้องการคำตอบจากข้อมูลจริงของเพจ กรุณาเชื่อมเพจและกดเริ่มวิเคราะห์เพจก่อนครับ"
 	}
 	if !s.Enabled() {
 		return fmt.Sprintf("สรุปเพจ %s: %s", report.PageName, report.Summary)
@@ -77,6 +87,36 @@ func (s *AIService) Answer(ctx context.Context, report models.AnalysisReport, qu
 		return fmt.Sprintf("ยังตอบเชิงลึกไม่ได้ในขณะนี้ สรุปที่มีคือ: %s", report.Summary)
 	}
 	return answer
+}
+
+func (s *AIService) answerGeneral(ctx context.Context, question string) string {
+	if !s.Enabled() {
+		return "ตอนนี้ระบบ AI ยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลังครับ"
+	}
+	prompt := fmt.Sprintf(`คุณคือ Linora ผู้ช่วยด้านการทำคอนเทนต์ Facebook ตอบเป็นภาษาไทยที่สุภาพ เข้าใจง่าย และนำไปใช้ได้จริง
+นี่เป็นคำถามทั่วไป จึงไม่สามารถอ้างว่าเห็นข้อมูลเพจ ตัวเลข รายงาน หรือโพสต์ล่าสุดของผู้ใช้ได้
+ให้ตอบอย่างกระชับแต่มีประโยชน์ พร้อมตัวอย่างเมื่อเหมาะสม ห้ามอ้างว่าระบบโพสต์ ตอบคอมเมนต์ หรือแก้ไขเพจให้ผู้ใช้แล้ว
+คำถาม: %s`, question)
+	answer, err := s.complete(ctx, prompt)
+	if err != nil || answer == "" {
+		return "ตอนนี้ยังตอบคำถามทั่วไปไม่ได้ กรุณาลองใหม่อีกครั้งครับ"
+	}
+	return "คำแนะนำทั่วไป (ไม่ได้อ้างอิงข้อมูลเพจล่าสุด)\n" + answer
+}
+
+func isPageDataQuestion(question string) bool {
+	value := strings.ToLower(strings.TrimSpace(question))
+	keywords := []string{
+		"ของฉัน", "เพจฉัน", "เพจของ", "รายงาน", "สรุปผล", "ผลวิเคราะห์", "วิเคราะห์ผล",
+		"ยอด", "ตัวเลข", "เข้าถึง", "มีส่วนร่วม", "คอมเมนต์", "คะแนน", "คุณภาพเพจ",
+		"โพสต์ล่าสุด", "สัปดาห์", "เดือนนี้", "วันนี้", "เวลาโพสต์",
+	}
+	for _, keyword := range keywords {
+		if strings.Contains(value, keyword) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *AIService) complete(ctx context.Context, prompt string) (string, error) {

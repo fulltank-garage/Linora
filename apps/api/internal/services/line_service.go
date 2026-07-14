@@ -70,18 +70,18 @@ func (s *LineService) Chat(ctx context.Context, lineUserID string, message strin
 	pageID, err := s.store.GetLinkedPage(ctx, lineUserID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrNotFound) {
-			return "ยังไม่ได้เชื่อม LINE กับเพจ กรุณาสร้างรหัสเชื่อมต่อจาก Linora ก่อนครับ", nil
+			return s.ai.Answer(ctx, nil, message), nil
 		}
 		return "", err
 	}
 	report, err := s.store.GetLatestReport(ctx, lineUserID, pageID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrNotFound) {
-			return "เพจนี้ยังไม่มีรายงานล่าสุด กรุณากดวิเคราะห์เพจก่อนครับ", nil
+			return s.ai.Answer(ctx, nil, message), nil
 		}
 		return "", err
 	}
-	return s.ai.Answer(ctx, report, message), nil
+	return s.ai.Answer(ctx, &report, message), nil
 }
 
 func (s *LineService) Reply(ctx context.Context, replyToken string, message string) error {
