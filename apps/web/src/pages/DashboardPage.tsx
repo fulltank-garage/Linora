@@ -61,6 +61,17 @@ function getPostingRecommendationSections(recommendation: string) {
   return sections.length >= 2 ? sections.slice(0, 2) : [recommendation.trim()];
 }
 
+function getContentGuidanceSections(recommendation: string) {
+  return recommendation
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const match = line.match(/^([^:：]+)[:：]\s*(.+)$/);
+      return match ? { detail: match[2], label: match[1] } : { detail: line, label: "คำแนะนำ" };
+    });
+}
+
 export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, report, weeklyReport }: DashboardPageProps) {
   const navigate = useNavigate();
   const [isManagementOpen, setIsManagementOpen] = useState(false);
@@ -77,6 +88,9 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
   const hasEnoughPostingTimeData = Boolean(postingTimeInsight && postingTimeInsight.basedOnPosts >= 3);
   const postingRecommendationSections = report.postingTimeRecommendation
     ? getPostingRecommendationSections(report.postingTimeRecommendation)
+    : [];
+  const contentGuidanceSections = report.aiContentRecommendation
+    ? getContentGuidanceSections(report.aiContentRecommendation)
     : [];
   const bestPostingTime = postingTimeInsight?.bestTime || "ยังไม่มีข้อมูล";
   const importantComment = report.importantComments[0];
@@ -560,7 +574,7 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
               <Box sx={{ alignItems: "center", display: "flex", gap: 1, pr: 5 }}>
                 <Stack spacing={0.55} sx={{ minWidth: 0 }}>
                   <Typography color="text.secondary" sx={{ fontSize: 13, fontWeight: 800 }}>
-                    คำแนะนำจาก Linora AI
+                    คำแนะนำจาก Linora
                   </Typography>
                   <Typography color="text.primary" sx={{ fontSize: 18, fontWeight: 900, lineHeight: 1.25, mt: "10px !important" }}>
                     แนวทางคอนเทนต์ที่ควรลอง
@@ -575,9 +589,24 @@ export function DashboardPage({ onAnalyze, onDeleteData, onDisconnect, page, rep
                   py: 1.25,
                 }}
               >
-                <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
-                  {report.aiContentRecommendation || "กดเริ่มวิเคราะห์เพจเพื่อให้ Linora AI วิเคราะห์แนวทางคอนเทนต์จากข้อมูลเพจล่าสุด"}
-                </Typography>
+                {contentGuidanceSections.length > 0 ? (
+                  <Stack spacing={1.15}>
+                    {contentGuidanceSections.map((section) => (
+                      <Box key={`${section.label}-${section.detail}`}>
+                        <Typography color="primary.main" sx={{ fontSize: 13, fontWeight: 900, lineHeight: 1.35 }}>
+                          {section.label}
+                        </Typography>
+                        <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55, mt: 0.2 }}>
+                          {section.detail}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
+                    กดเริ่มวิเคราะห์เพจเพื่อให้ Linora วิเคราะห์แนวทางคอนเทนต์จากข้อมูลเพจล่าสุด
+                  </Typography>
+                )}
               </Box>
             </Stack>
           </CardContent>
