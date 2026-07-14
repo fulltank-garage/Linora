@@ -2,6 +2,9 @@ package services
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"io"
 	"net/http"
 	"net/url"
@@ -65,6 +68,11 @@ func TestCompleteLoginExchangesCodeAndConsumesSelectedPageOnce(t *testing.T) {
 				t.Fatalf("code = %q, want authorization-code", request.URL.Query().Get("code"))
 			}
 			body = `{"access_token":"user-access-token"}`
+		case "/v24.0/me":
+			if request.URL.Query().Get("access_token") != "user-access-token" || request.URL.Query().Get("fields") != "id" {
+				t.Fatalf("unexpected current-user request: %s", request.URL.String())
+			}
+			body = `{"id":"facebook-user-1"}`
 		case "/v24.0/me/accounts":
 			if request.URL.Query().Get("access_token") != "user-access-token" {
 				t.Fatalf("access_token = %q, want user-access-token", request.URL.Query().Get("access_token"))
@@ -100,5 +108,24 @@ func TestCompleteLoginExchangesCodeAndConsumesSelectedPageOnce(t *testing.T) {
 	}
 	if _, err := service.ConsumePage(handoff, "line-user-1", "page-1"); err == nil {
 		t.Fatal("ConsumePage accepted a handoff code twice")
+	}
+}
+
+func TestVerifyDataDeletionRequest(t *testing.T) {
+	service := NewFacebookService(config.FacebookConfig{AppSecret: "app-secret"})
+	payload := []byte(`{"user_id":"facebook-user-1"}`)
+	mac := hmac.New(sha256.New, []byte("app-secret"))
+	_, _ = mac.Write(payload)
+	signedRequest := base64.RawURLEncoding.EncodeToString(mac.Sum(nil)) + "." + base64.RawURLEncoding.EncodeToString(payload)
+
+	userID, err := service.VerifyDataDeletionRequest(signedRequest)
+	if err != nil {
+		t.Fatalf("VerifyDataDeletionRequest returned an error: %v", err)
+	}
+	if userID != "facebook-user-1" {
+		t.Fatalf("user ID = %q, want facebook-user-1", userID)
+	}
+	if _, err := service.VerifyDataDeletionRequest("invalid.request"); err == nil {
+		t.Fatal("expected an invalid signed request to fail")
 	}
 }

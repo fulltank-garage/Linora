@@ -31,8 +31,11 @@ func (s *PageService) Connect(ctx context.Context, ownerID string, handoffCode s
 	if err := s.store.EnsureLineUser(ctx, ownerID); err != nil {
 		return models.ConnectedPageResponse{}, err
 	}
-	page, authorizedPages, err := s.facebook.ConsumePages(handoffCode, ownerID, pageID)
+	page, authorizedPages, facebookUserID, err := s.facebook.ConsumeConnection(handoffCode, ownerID, pageID)
 	if err != nil {
+		return models.ConnectedPageResponse{}, err
+	}
+	if err := s.store.LinkFacebookUser(ctx, ownerID, facebookUserID); err != nil {
 		return models.ConnectedPageResponse{}, err
 	}
 	for _, authorizedPage := range authorizedPages {
@@ -41,11 +44,12 @@ func (s *PageService) Connect(ctx context.Context, ownerID string, handoffCode s
 			return models.ConnectedPageResponse{}, err
 		}
 		if err := s.store.UpsertConnection(ctx, repositories.PageConnection{
-			AccessToken: encryptedToken,
-			Category:    authorizedPage.Category,
-			OwnerID:     ownerID,
-			PageID:      authorizedPage.PageID,
-			PageName:    authorizedPage.PageName,
+			AccessToken:    encryptedToken,
+			Category:       authorizedPage.Category,
+			FacebookUserID: facebookUserID,
+			OwnerID:        ownerID,
+			PageID:         authorizedPage.PageID,
+			PageName:       authorizedPage.PageName,
 		}); err != nil {
 			return models.ConnectedPageResponse{}, err
 		}
@@ -203,6 +207,19 @@ func (s *PageService) Delete(ctx context.Context, ownerID string, pageID string)
 		_ = s.cache.Delete(ctx, ownerID, pageID)
 	}
 	return s.store.DeletePage(ctx, ownerID, pageID)
+}
+
+func (s *PageService) DeleteFacebookUserData(ctx context.Context, facebookUserID string) error {
+	connections, err := s.store.DeleteFacebookUserData(ctx, facebookUserID)
+	if err != nil {
+		return err
+	}
+	if s.cache != nil {
+		for _, connection := range connections {
+			_ = s.cache.Delete(ctx, connection.OwnerID, connection.PageID)
+		}
+	}
+	return nil
 }
 
 func (s *PageService) Disconnect(ctx context.Context, ownerID string, pageID string) error {

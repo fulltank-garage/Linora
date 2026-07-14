@@ -2,7 +2,10 @@ package services
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,9 +22,10 @@ import (
 const FacebookHandoffLifetime = 5 * time.Minute
 
 type facebookHandoff struct {
-	ExpiresAt time.Time
-	OwnerID   string
-	Pages     []models.FacebookPage
+	ExpiresAt      time.Time
+	FacebookUserID string
+	OwnerID        string
+	Pages          []models.FacebookPage
 }
 
 type facebookOAuthState struct {
@@ -126,6 +130,10 @@ func (s *FacebookService) CompleteLogin(ctx context.Context, code string, ownerI
 	if err != nil {
 		return "", err
 	}
+	facebookUserID, err := s.fetchCurrentUserID(ctx, accessToken)
+	if err != nil {
+		return "", err
+	}
 	pages, err := s.fetchPages(ctx, accessToken)
 	if err != nil {
 		return "", err
@@ -134,7 +142,7 @@ func (s *FacebookService) CompleteLogin(ctx context.Context, code string, ownerI
 	if err != nil {
 		return "", err
 	}
-	s.storeHandoff(handoffCode, ownerID, pages)
+	s.storeHandoff(handoffCode, ownerID, facebookUserID, pages)
 	return handoffCode, nil
 }
 
@@ -154,6 +162,11 @@ func (s *FacebookService) ConsumePage(code string, ownerID string, pageID string
 }
 
 func (s *FacebookService) ConsumePages(code string, ownerID string, pageID string) (models.FacebookPage, []models.FacebookPage, error) {
+	page, pages, _, err := s.ConsumeConnection(code, ownerID, pageID)
+	return page, pages, err
+}
+
+func (s *FacebookService) ConsumeConnection(code string, ownerID string, pageID string) (models.FacebookPage, []models.FacebookPage, string, error) {
 	s.mu.Lock()
 	entry, ok := s.handoffs[code]
 	if ok {
@@ -161,14 +174,41 @@ func (s *FacebookService) ConsumePages(code string, ownerID string, pageID strin
 	}
 	s.mu.Unlock()
 	if !ok || entry.OwnerID != ownerID || time.Now().After(entry.ExpiresAt) {
-		return models.FacebookPage{}, nil, errors.New("session Facebook Login หมดอายุแล้ว กรุณาเข้าสู่ระบบอีกครั้ง")
+		return models.FacebookPage{}, nil, "", errors.New("session Facebook Login หมดอายุแล้ว กรุณาเข้าสู่ระบบอีกครั้ง")
 	}
 	for _, page := range entry.Pages {
 		if page.PageID == pageID && page.AccessToken != "" {
-			return page, entry.Pages, nil
+			return page, entry.Pages, entry.FacebookUserID, nil
 		}
 	}
-	return models.FacebookPage{}, nil, errors.New("ไม่พบสิทธิ์เข้าถึงเพจที่เลือก")
+	return models.FacebookPage{}, nil, "", errors.New("ไม่พบสิทธิ์เข้าถึงเพจที่เลือก")
+}
+
+func (s *FacebookService) VerifyDataDeletionRequest(signedRequest string) (string, error) {
+	parts := strings.Split(signedRequest, ".")
+	if len(parts) != 2 || s.config.AppSecret == "" {
+		return "", errors.New("invalid signed request")
+	}
+	signature, err := decodeBase64URL(parts[0])
+	if err != nil {
+		return "", errors.New("invalid signed request")
+	}
+	payload, err := decodeBase64URL(parts[1])
+	if err != nil {
+		return "", errors.New("invalid signed request")
+	}
+	mac := hmac.New(sha256.New, []byte(s.config.AppSecret))
+	_, _ = mac.Write(payload)
+	if !hmac.Equal(signature, mac.Sum(nil)) {
+		return "", errors.New("invalid signed request")
+	}
+	var data struct {
+		UserID string `json:"user_id"`
+	}
+	if err := json.Unmarshal(payload, &data); err != nil || strings.TrimSpace(data.UserID) == "" {
+		return "", errors.New("signed request has no user ID")
+	}
+	return data.UserID, nil
 }
 
 func (s *FacebookService) exchangeCode(ctx context.Context, code string) (string, error) {
@@ -203,6 +243,36 @@ func (s *FacebookService) exchangeCode(ctx context.Context, code string) (string
 		return "", errors.New("facebook response did not include an access token")
 	}
 	return payload.AccessToken, nil
+}
+
+func (s *FacebookService) fetchCurrentUserID(ctx context.Context, accessToken string) (string, error) {
+	endpoint := url.URL{Scheme: "https", Host: "graph.facebook.com", Path: "/" + s.config.GraphVersion + "/me"}
+	query := endpoint.Query()
+	query.Set("fields", "id")
+	query.Set("access_token", accessToken)
+	endpoint.RawQuery = query.Encode()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+	if err != nil {
+		return "", err
+	}
+	response, err := s.http.Do(request)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return "", facebookResponseError(response)
+	}
+	var payload struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return "", err
+	}
+	if payload.ID == "" {
+		return "", errors.New("facebook response did not include a user ID")
+	}
+	return payload.ID, nil
 }
 
 func (s *FacebookService) fetchPages(ctx context.Context, accessToken string) ([]models.FacebookPage, error) {
@@ -454,7 +524,7 @@ func facebookResponseError(response *http.Response) error {
 	return &FacebookAPIError{Code: payload.Error.Code, Message: message, StatusCode: response.StatusCode}
 }
 
-func (s *FacebookService) storeHandoff(code string, ownerID string, pages []models.FacebookPage) {
+func (s *FacebookService) storeHandoff(code string, ownerID string, facebookUserID string, pages []models.FacebookPage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now()
@@ -463,7 +533,14 @@ func (s *FacebookService) storeHandoff(code string, ownerID string, pages []mode
 			delete(s.handoffs, key)
 		}
 	}
-	s.handoffs[code] = facebookHandoff{ExpiresAt: now.Add(FacebookHandoffLifetime), OwnerID: ownerID, Pages: pages}
+	s.handoffs[code] = facebookHandoff{ExpiresAt: now.Add(FacebookHandoffLifetime), FacebookUserID: facebookUserID, OwnerID: ownerID, Pages: pages}
+}
+
+func decodeBase64URL(value string) ([]byte, error) {
+	if decoded, err := base64.RawURLEncoding.DecodeString(value); err == nil {
+		return decoded, nil
+	}
+	return base64.URLEncoding.DecodeString(value)
 }
 
 func SecureToken() (string, error) {

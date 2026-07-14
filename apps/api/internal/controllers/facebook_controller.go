@@ -10,11 +10,12 @@ import (
 )
 
 type FacebookController struct {
+	page    *services.PageService
 	service *services.FacebookService
 }
 
-func NewFacebookController(service *services.FacebookService) *FacebookController {
-	return &FacebookController{service: service}
+func NewFacebookController(service *services.FacebookService, page *services.PageService) *FacebookController {
+	return &FacebookController{page: page, service: service}
 }
 
 func (c *FacebookController) Begin(cxt *gin.Context) {
@@ -77,6 +78,37 @@ func (c *FacebookController) Session(cxt *gin.Context) {
 		return
 	}
 	cxt.JSON(http.StatusOK, gin.H{"pages": pages})
+}
+
+func (c *FacebookController) DataDeletion(cxt *gin.Context) {
+	if c.page == nil {
+		cxt.JSON(http.StatusServiceUnavailable, gin.H{"error": "data deletion is unavailable"})
+		return
+	}
+	facebookUserID, err := c.service.VerifyDataDeletionRequest(cxt.PostForm("signed_request"))
+	if err != nil {
+		cxt.JSON(http.StatusBadRequest, gin.H{"error": "invalid data deletion request"})
+		return
+	}
+	if err := c.page.DeleteFacebookUserData(cxt.Request.Context(), facebookUserID); err != nil {
+		cxt.JSON(http.StatusInternalServerError, gin.H{"error": "could not delete user data"})
+		return
+	}
+	confirmationCode, err := services.SecureToken()
+	if err != nil {
+		cxt.JSON(http.StatusInternalServerError, gin.H{"error": "could not confirm data deletion"})
+		return
+	}
+	statusURL, err := url.Parse(c.service.AppURL())
+	if err != nil {
+		cxt.JSON(http.StatusInternalServerError, gin.H{"error": "invalid app URL"})
+		return
+	}
+	statusURL.Path = "/data-deletion"
+	query := statusURL.Query()
+	query.Set("confirmation_code", confirmationCode)
+	statusURL.RawQuery = query.Encode()
+	cxt.JSON(http.StatusOK, gin.H{"url": statusURL.String(), "confirmation_code": confirmationCode})
 }
 
 func (c *FacebookController) redirectWithError(cxt *gin.Context, message string) {

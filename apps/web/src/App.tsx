@@ -259,11 +259,16 @@ function AppRoutes() {
             path="/pages"
           />
           <Route element={<AnalyzingPage />} path="/analyzing" />
-          <Route element={<LegalPage type="privacy" />} path="/privacy" />
-          <Route element={<LegalPage type="terms" />} path="/terms" />
-          <Route element={<LegalPage type="data-deletion" />} path="/data-deletion" />
         </Routes>
       </Box>
+    </MobileAppShell>
+  );
+}
+
+function PublicLegalPage({ type }: { type: "privacy" | "terms" | "data-deletion" }) {
+  return (
+    <MobileAppShell>
+      <LegalPage type={type} />
     </MobileAppShell>
   );
 }
@@ -271,7 +276,12 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <Routes>
+        <Route element={<PublicLegalPage type="privacy" />} path="/privacy" />
+        <Route element={<PublicLegalPage type="terms" />} path="/terms" />
+        <Route element={<PublicLegalPage type="data-deletion" />} path="/data-deletion" />
+        <Route element={<AppRoutes />} path="*" />
+      </Routes>
     </BrowserRouter>
   );
 }

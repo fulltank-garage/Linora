@@ -15,7 +15,7 @@ func NewRouter(cfg config.Config, analysisService *services.AnalysisService, fac
 	router := gin.New()
 	router.Use(gin.Recovery(), middleware.CORS(cfg.Facebook.AppURL))
 
-	facebookController := controllers.NewFacebookController(facebookService)
+	facebookController := controllers.NewFacebookController(facebookService, pageService)
 	requireLineIdentity := middleware.RequireLineIdentity(lineIdentity, cfg.Environment)
 	if pageService != nil && lineService != nil {
 		integrationController := controllers.NewIntegrationController(pageService, lineService, cfg.Line.ChannelSecret)
@@ -43,6 +43,7 @@ func NewRouter(cfg config.Config, analysisService *services.AnalysisService, fac
 	router.POST("/api/facebook/login", requireLineIdentity, facebookController.Begin)
 	router.GET("/api/facebook/callback", facebookController.Callback)
 	router.GET("/api/facebook/session", requireLineIdentity, facebookController.Session)
+	router.POST("/api/facebook/data-deletion", facebookController.DataDeletion)
 
 	return router
 }

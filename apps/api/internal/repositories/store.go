@@ -14,17 +14,19 @@ import (
 var ErrNotFound = errors.New("record not found")
 
 type PageConnection struct {
-	AccessToken string
-	Category    string
-	ConnectedAt time.Time
-	OwnerID     string
-	PageID      string
-	PageName    string
-	SyncedAt    *time.Time
+	AccessToken    string
+	Category       string
+	ConnectedAt    time.Time
+	FacebookUserID string
+	OwnerID        string
+	PageID         string
+	PageName       string
+	SyncedAt       *time.Time
 }
 
 type Store interface {
 	CreateLinkCode(context.Context, string, string, string, time.Time) error
+	DeleteFacebookUserData(context.Context, string) ([]PageConnection, error)
 	DeletePage(context.Context, string, string) error
 	DisconnectPage(context.Context, string, string) error
 	EnsureLineUser(context.Context, string) error
@@ -33,6 +35,7 @@ type Store interface {
 	GetLinkedPage(context.Context, string) (string, error)
 	ListMetrics(context.Context, string, string, time.Time, time.Time) ([]models.DailyPageMetrics, error)
 	LinkPageToLineUser(context.Context, string, string) error
+	LinkFacebookUser(context.Context, string, string) error
 	ListConnections(context.Context, string) ([]PageConnection, error)
 	Migrate(context.Context) error
 	SaveMetrics(context.Context, string, string, models.PageMetrics) error
@@ -105,7 +108,13 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 			page_id TEXT NOT NULL,
 			linked_at TIMESTAMPTZ NOT NULL DEFAULT now()
 		);
+		CREATE TABLE IF NOT EXISTS facebook_user_links (
+			facebook_user_id TEXT PRIMARY KEY,
+			owner_id TEXT NOT NULL,
+			linked_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		);
 
+		ALTER TABLE page_connections ADD COLUMN IF NOT EXISTS facebook_user_id TEXT;
 		ALTER TABLE page_connections ADD COLUMN IF NOT EXISTS owner_id TEXT NOT NULL DEFAULT 'legacy';
 		ALTER TABLE page_metrics ADD COLUMN IF NOT EXISTS owner_id TEXT NOT NULL DEFAULT 'legacy';
 		ALTER TABLE analysis_reports ADD COLUMN IF NOT EXISTS owner_id TEXT NOT NULL DEFAULT 'legacy';
@@ -119,6 +128,7 @@ func (s *PostgresStore) Migrate(ctx context.Context) error {
 		ALTER TABLE page_metrics DROP CONSTRAINT IF EXISTS page_metrics_pkey;
 		ALTER TABLE page_metrics ADD PRIMARY KEY (owner_id, page_id, recorded_on);
 		CREATE INDEX IF NOT EXISTS analysis_reports_owner_page_created_idx ON analysis_reports(owner_id, page_id, created_at DESC);
+		CREATE INDEX IF NOT EXISTS page_connections_facebook_user_idx ON page_connections(facebook_user_id);
 	`)
 	return err
 }
@@ -131,25 +141,108 @@ func (s *PostgresStore) EnsureLineUser(ctx context.Context, ownerID string) erro
 	return err
 }
 
+func (s *PostgresStore) LinkFacebookUser(ctx context.Context, ownerID string, facebookUserID string) error {
+	if facebookUserID == "" {
+		return errors.New("facebook user ID is required")
+	}
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO facebook_user_links (facebook_user_id, owner_id)
+		VALUES ($1, $2)
+		ON CONFLICT (facebook_user_id) DO UPDATE SET owner_id = EXCLUDED.owner_id, linked_at = now()
+	`, facebookUserID, ownerID)
+	return err
+}
+
+// DeleteFacebookUserData removes only the records attached to the Facebook user
+// that made a signed data-deletion request. It leaves other connected accounts intact.
+func (s *PostgresStore) DeleteFacebookUserData(ctx context.Context, facebookUserID string) ([]PageConnection, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	var ownerID string
+	err = tx.QueryRow(ctx, `SELECT owner_id FROM facebook_user_links WHERE facebook_user_id = $1`, facebookUserID).Scan(&ownerID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, tx.Commit(ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := tx.Query(ctx, `
+		SELECT owner_id, page_id, page_name, category, encrypted_access_token, connected_at, last_synced_at, COALESCE(facebook_user_id, '')
+		FROM page_connections
+		WHERE owner_id = $1 AND facebook_user_id = $2
+	`, ownerID, facebookUserID)
+	if err != nil {
+		return nil, err
+	}
+	connections := make([]PageConnection, 0)
+	for rows.Next() {
+		var connection PageConnection
+		if err := rows.Scan(&connection.OwnerID, &connection.PageID, &connection.PageName, &connection.Category, &connection.AccessToken, &connection.ConnectedAt, &connection.SyncedAt, &connection.FacebookUserID); err != nil {
+			return nil, err
+		}
+		connections = append(connections, connection)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// pgx keeps the query result active until it is closed. Release it before
+	// executing the deletion statements within this transaction.
+	rows.Close()
+
+	for _, connection := range connections {
+		if _, err := tx.Exec(ctx, `DELETE FROM analysis_reports WHERE owner_id = $1 AND page_id = $2`, ownerID, connection.PageID); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM page_metrics WHERE owner_id = $1 AND page_id = $2`, ownerID, connection.PageID); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM line_link_codes WHERE owner_id = $1 AND page_id = $2`, ownerID, connection.PageID); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM line_page_links WHERE line_user_id = $1 AND page_id = $2`, ownerID, connection.PageID); err != nil {
+			return nil, err
+		}
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM page_connections WHERE owner_id = $1 AND facebook_user_id = $2`, ownerID, facebookUserID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM facebook_user_links WHERE facebook_user_id = $1`, facebookUserID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM line_users WHERE line_user_id = $1 AND NOT EXISTS (SELECT 1 FROM page_connections WHERE owner_id = $1)`, ownerID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return connections, nil
+}
+
 func (s *PostgresStore) UpsertConnection(ctx context.Context, connection PageConnection) error {
 	_, err := s.pool.Exec(ctx, `
-		INSERT INTO page_connections (owner_id, page_id, page_name, category, encrypted_access_token)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO page_connections (owner_id, page_id, page_name, category, encrypted_access_token, facebook_user_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (owner_id, page_id) DO UPDATE SET
 			page_name = EXCLUDED.page_name,
 			category = EXCLUDED.category,
 			encrypted_access_token = EXCLUDED.encrypted_access_token,
+			facebook_user_id = EXCLUDED.facebook_user_id,
 			connected_at = now()
-	`, connection.OwnerID, connection.PageID, connection.PageName, connection.Category, connection.AccessToken)
+	`, connection.OwnerID, connection.PageID, connection.PageName, connection.Category, connection.AccessToken, connection.FacebookUserID)
 	return err
 }
 
 func (s *PostgresStore) GetConnection(ctx context.Context, ownerID string, pageID string) (PageConnection, error) {
 	var connection PageConnection
 	err := s.pool.QueryRow(ctx, `
-		SELECT owner_id, page_id, page_name, category, encrypted_access_token, connected_at, last_synced_at
+		SELECT owner_id, page_id, page_name, category, encrypted_access_token, connected_at, last_synced_at, COALESCE(facebook_user_id, '')
 		FROM page_connections WHERE owner_id = $1 AND page_id = $2
-	`, ownerID, pageID).Scan(&connection.OwnerID, &connection.PageID, &connection.PageName, &connection.Category, &connection.AccessToken, &connection.ConnectedAt, &connection.SyncedAt)
+	`, ownerID, pageID).Scan(&connection.OwnerID, &connection.PageID, &connection.PageName, &connection.Category, &connection.AccessToken, &connection.ConnectedAt, &connection.SyncedAt, &connection.FacebookUserID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return PageConnection{}, ErrNotFound
 	}
@@ -158,7 +251,7 @@ func (s *PostgresStore) GetConnection(ctx context.Context, ownerID string, pageI
 
 func (s *PostgresStore) ListConnections(ctx context.Context, ownerID string) ([]PageConnection, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT owner_id, page_id, page_name, category, encrypted_access_token, connected_at, last_synced_at
+		SELECT owner_id, page_id, page_name, category, encrypted_access_token, connected_at, last_synced_at, COALESCE(facebook_user_id, '')
 		FROM page_connections WHERE owner_id = $1 ORDER BY page_name ASC
 	`, ownerID)
 	if err != nil {
@@ -168,7 +261,7 @@ func (s *PostgresStore) ListConnections(ctx context.Context, ownerID string) ([]
 	connections := make([]PageConnection, 0)
 	for rows.Next() {
 		var connection PageConnection
-		if err := rows.Scan(&connection.OwnerID, &connection.PageID, &connection.PageName, &connection.Category, &connection.AccessToken, &connection.ConnectedAt, &connection.SyncedAt); err != nil {
+		if err := rows.Scan(&connection.OwnerID, &connection.PageID, &connection.PageName, &connection.Category, &connection.AccessToken, &connection.ConnectedAt, &connection.SyncedAt, &connection.FacebookUserID); err != nil {
 			return nil, err
 		}
 		connections = append(connections, connection)
