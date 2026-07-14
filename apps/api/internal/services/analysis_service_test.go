@@ -27,3 +27,18 @@ func TestAnalyzePageSnapshotCalculatesPostingTimeFromPostEngagement(t *testing.T
 		t.Fatalf("bestPostingTimes = %#v, want derived best time", report.BestPostingTimes)
 	}
 }
+
+func TestAnalyzePageSnapshotSupportsFacebookOffsetWithoutColon(t *testing.T) {
+	report := NewAnalysisService().AnalyzePageSnapshot(models.FacebookPage{PageName: "Linora"}, models.PageSnapshot{
+		Posts: []models.FacebookPost{
+			{ID: "facebook-format", CreatedAt: "2026-07-10T19:00:00+0000", Reactions: 10},
+		},
+	})
+
+	if report.PostingTimeInsight.BasedOnPosts != 1 {
+		t.Fatalf("basedOnPosts = %d, want 1", report.PostingTimeInsight.BasedOnPosts)
+	}
+	if report.PostingTimeInsight.BestTime != "00:00 - 02:00" {
+		t.Fatalf("bestTime = %q, want 00:00 - 02:00", report.PostingTimeInsight.BestTime)
+	}
+}

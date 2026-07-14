@@ -119,7 +119,7 @@ func calculatePostingTimeInsight(posts []models.FacebookPost) models.PostingTime
 	location := time.FixedZone("Asia/Bangkok", 7*60*60)
 
 	for _, post := range posts {
-		postedAt, err := time.Parse(time.RFC3339, post.CreatedAt)
+		postedAt, err := parseFacebookPostTime(post.CreatedAt)
 		if err != nil {
 			continue
 		}
@@ -165,6 +165,15 @@ func calculatePostingTimeInsight(posts []models.FacebookPost) models.PostingTime
 	}
 
 	return insight
+}
+
+func parseFacebookPostTime(value string) (time.Time, error) {
+	for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05-0700"} {
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return parsed, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unsupported Facebook post timestamp: %q", value)
 }
 
 func calculateHealthScore(input models.ManualAnalysisInput) int {
