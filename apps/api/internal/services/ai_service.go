@@ -63,60 +63,42 @@ func (s *AIService) EnhanceReport(ctx context.Context, report models.AnalysisRep
 func (s *AIService) Answer(ctx context.Context, report *models.AnalysisReport, question string) string {
 	question = strings.TrimSpace(question)
 	if question == "" {
-		return "พิมพ์คำถามเกี่ยวกับเพจ หรือขอไอเดียคอนเทนต์ได้เลยครับ"
+		return "พิมพ์คำถามเกี่ยวกับเพจที่เลือก หรือขอไอเดียคอนเทนต์ได้เลยครับ"
 	}
-	if isPageDataQuestion(question) {
-		return s.answerFromReport(ctx, report, question)
-	}
-	return s.answerGeneral(ctx, question)
+	return s.answerFromReport(ctx, report, question)
 }
 
 func (s *AIService) answerFromReport(ctx context.Context, report *models.AnalysisReport, question string) string {
 	if report == nil {
-		return "หากต้องการคำตอบจากข้อมูลจริงของเพจ กรุณาเชื่อมเพจและกดเริ่มวิเคราะห์เพจก่อนครับ"
+		return "กรุณาเลือกเพจใน Linora ก่อนครับ"
 	}
 	if !s.Enabled() {
 		return fmt.Sprintf("สรุปเพจ %s: %s", report.PageName, report.Summary)
 	}
-	prompt := fmt.Sprintf(`คุณคือ Linora ตอบคำถามผู้ดูแลเพจเป็นภาษาไทยอย่างสุภาพและกระชับ
-ตอบจากรายงานนี้เท่านั้น หากไม่มีข้อมูลให้บอกตรง ๆ ว่ายังไม่มีข้อมูลเพียงพอ
-รายงาน: %s
-คำถาม: %s`, mustJSON(report), question)
+	prompt := fmt.Sprintf(`คุณคือ Linora ผู้ช่วยวางกลยุทธ์คอนเทนต์ Facebook ของเพจที่ผู้ใช้เลือกอยู่ ตอบภาษาไทยที่เข้าใจง่าย สุภาพ และนำไปทำต่อได้จริง
+คำตอบนี้อ้างอิงได้เฉพาะรายงานของเพจที่เลือกอยู่ด้านล่างเท่านั้น ห้ามอ้างว่าเห็นข้อมูลของเพจอื่น ห้ามแต่งตัวเลข ห้ามบอกว่าคุณโพสต์ ตอบคอมเมนต์ หรือแก้ไขเพจให้ผู้ใช้แล้ว
+
+เมื่อคำถามต้องการไอเดียคอนเทนต์ กลยุทธ์ หรือแนวทางทำโพสต์ ให้ตอบละเอียดตามหัวข้อต่อไปนี้ โดยใช้เฉพาะหัวข้อที่เกี่ยวข้อง:
+🎯 แนวทางที่ควรทำ
+💡 หัวข้อโพสต์ที่น่าลอง
+🪝 จุดเปิดโพสต์
+📝 วิธีทำคอนเทนต์
+✨ จุดขายที่ควรสื่อ
+🖼️ ภาพหรือวิดีโอที่เหมาะ
+📣 ชวนผู้อ่านทำอะไรต่อ
+📌 เหตุผลจากข้อมูลเพจ
+
+ใต้แต่ละหัวข้อให้เขียนเป็นข้อความต่อเนื่องหรือรายการสั้น ๆ ที่ทำตามได้จริง เว้นบรรทัดว่าง 1 บรรทัดระหว่างทุกหัวข้อ ใช้อีโมจิเฉพาะต้นหัวข้อ และอย่าใช้อีโมจิในเนื้อหาจนรก
+ถ้าผู้ใช้ถามข้อมูลเชิงข้อเท็จจริง ให้ตอบตรงคำถามจากรายงานก่อน แล้วค่อยให้ข้อเสนอแนะเมื่อมีประโยชน์ หากรายงานไม่มีข้อมูลที่ถาม ให้บอกอย่างตรงไปตรงมา
+
+รายงานเพจที่เลือก: %s
+
+คำถามผู้ใช้: %s`, mustJSON(report), question)
 	answer, err := s.complete(ctx, prompt)
 	if err != nil || answer == "" {
 		return fmt.Sprintf("ยังตอบเชิงลึกไม่ได้ในขณะนี้ สรุปที่มีคือ: %s", report.Summary)
 	}
 	return answer
-}
-
-func (s *AIService) answerGeneral(ctx context.Context, question string) string {
-	if !s.Enabled() {
-		return "ตอนนี้ระบบ AI ยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลังครับ"
-	}
-	prompt := fmt.Sprintf(`คุณคือ Linora ผู้ช่วยด้านการทำคอนเทนต์ Facebook ตอบเป็นภาษาไทยที่สุภาพ เข้าใจง่าย และนำไปใช้ได้จริง
-นี่เป็นคำถามทั่วไป จึงไม่สามารถอ้างว่าเห็นข้อมูลเพจ ตัวเลข รายงาน หรือโพสต์ล่าสุดของผู้ใช้ได้
-ให้ตอบอย่างกระชับแต่มีประโยชน์ พร้อมตัวอย่างเมื่อเหมาะสม ห้ามอ้างว่าระบบโพสต์ ตอบคอมเมนต์ หรือแก้ไขเพจให้ผู้ใช้แล้ว
-คำถาม: %s`, question)
-	answer, err := s.complete(ctx, prompt)
-	if err != nil || answer == "" {
-		return "ตอนนี้ยังตอบคำถามทั่วไปไม่ได้ กรุณาลองใหม่อีกครั้งครับ"
-	}
-	return "คำแนะนำทั่วไป (ไม่ได้อ้างอิงข้อมูลเพจล่าสุด)\n" + answer
-}
-
-func isPageDataQuestion(question string) bool {
-	value := strings.ToLower(strings.TrimSpace(question))
-	keywords := []string{
-		"ของฉัน", "เพจฉัน", "เพจของ", "รายงาน", "สรุปผล", "ผลวิเคราะห์", "วิเคราะห์ผล",
-		"ยอด", "ตัวเลข", "เข้าถึง", "มีส่วนร่วม", "คอมเมนต์", "คะแนน", "คุณภาพเพจ",
-		"โพสต์ล่าสุด", "สัปดาห์", "เดือนนี้", "วันนี้", "เวลาโพสต์",
-	}
-	for _, keyword := range keywords {
-		if strings.Contains(value, keyword) {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *AIService) complete(ctx context.Context, prompt string) (string, error) {

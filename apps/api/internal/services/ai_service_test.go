@@ -12,7 +12,15 @@ import (
 	"github.com/fulltank-garage/linora/apps/api/internal/models"
 )
 
-func TestAnswerUsesGeneralModeWithoutPageReport(t *testing.T) {
+func TestAnswerRequiresSelectedPageReport(t *testing.T) {
+	service := &AIService{}
+	answer := service.Answer(context.Background(), nil, "ช่วยคิดหัวข้อโพสต์ร้านกาแฟ")
+	if answer != "กรุณาเลือกเพจใน Linora ก่อนครับ" {
+		t.Fatalf("unexpected answer without selected page: %q", answer)
+	}
+}
+
+func TestAnswerBuildsDetailedPageStrategyPrompt(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		var body map[string]any
 		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
@@ -23,31 +31,29 @@ func TestAnswerUsesGeneralModeWithoutPageReport(t *testing.T) {
 			t.Fatalf("expected one chat message, got %#v", body["messages"])
 		}
 		content := messages[0].(map[string]any)["content"].(string)
-		if !strings.Contains(content, "คำถามทั่วไป") {
-			t.Fatalf("expected general chat prompt, got %q", content)
+		if !strings.Contains(content, "🎯 แนวทางที่ควรทำ") || !strings.Contains(content, "เว้นบรรทัดว่าง") {
+			t.Fatalf("expected detailed strategy prompt, got %q", content)
 		}
-		_, _ = writer.Write([]byte(`{"choices":[{"message":{"content":"ลองทำโพสต์แบบคำถามสั้น ๆ"}}]}`))
+		_, _ = writer.Write([]byte(`{"choices":[{"message":{"content":"🎯 แนวทางที่ควรทำ\nโพสต์เรื่องเมนูเด่น\n\n💡 หัวข้อโพสต์ที่น่าลอง\nเมนูที่ลูกค้ากลับมาซ้ำ"}}]}`))
 	}))
 	defer server.Close()
 
 	service := &AIService{config: config.AIConfig{APIKey: "key", BaseURL: server.URL, Model: "test", Provider: "deepseek"}, http: server.Client()}
-	answer := service.Answer(context.Background(), nil, "ช่วยคิดหัวข้อโพสต์ร้านกาแฟ")
-	if !strings.Contains(answer, "คำแนะนำทั่วไป") || !strings.Contains(answer, "โพสต์แบบคำถาม") {
-		t.Fatalf("unexpected general answer: %q", answer)
+	report := &models.AnalysisReport{PageName: "Linora Cafe", Summary: "มีข้อมูลล่าสุด"}
+	answer := service.Answer(context.Background(), report, "ช่วยคิดหัวข้อโพสต์ร้านกาแฟ")
+	if !strings.Contains(answer, "🎯 แนวทางที่ควรทำ") || !strings.Contains(answer, "หัวข้อโพสต์") {
+		t.Fatalf("unexpected strategy answer: %q", answer)
 	}
 }
 
-func TestAnswerKeepsPageDataQuestionsGrounded(t *testing.T) {
+func TestAnswerKeepsPageQuestionsGrounded(t *testing.T) {
 	service := &AIService{}
 	answer := service.Answer(context.Background(), nil, "สรุปยอดเข้าถึงของเพจฉันให้หน่อย")
-	if !strings.Contains(answer, "เชื่อมเพจ") {
-		t.Fatalf("expected request for page analysis, got %q", answer)
+	if answer != "กรุณาเลือกเพจใน Linora ก่อนครับ" {
+		t.Fatalf("expected request to select a page, got %q", answer)
 	}
 
 	report := &models.AnalysisReport{PageName: "Linora Demo", Summary: "มีข้อมูลล่าสุด"}
-	if !isPageDataQuestion("รายงานของเพจฉันเป็นอย่างไร") || isPageDataQuestion("ช่วยคิดหัวข้อโพสต์ร้านกาแฟ") {
-		t.Fatal("page data question classification is incorrect")
-	}
 	if got := service.Answer(context.Background(), report, ""); got == "" {
 		t.Fatal("expected empty questions to return guidance")
 	}

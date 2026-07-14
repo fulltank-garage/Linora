@@ -70,14 +70,14 @@ func (s *LineService) Chat(ctx context.Context, lineUserID string, message strin
 	pageID, err := s.store.GetLinkedPage(ctx, lineUserID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrNotFound) {
-			return s.ai.Answer(ctx, nil, message), nil
+			return "กรุณาเลือกเพจใน Linora ก่อนครับ", nil
 		}
 		return "", err
 	}
 	report, err := s.store.GetLatestReport(ctx, lineUserID, pageID)
 	if err != nil {
 		if errors.Is(err, repositories.ErrNotFound) {
-			return s.ai.Answer(ctx, nil, message), nil
+			return "เพจที่เลือกยังไม่มีรายงาน กรุณากดเริ่มวิเคราะห์เพจก่อนครับ", nil
 		}
 		return "", err
 	}
