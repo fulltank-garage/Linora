@@ -40,8 +40,11 @@ func (s *AIService) EnhanceReport(ctx context.Context, report models.AnalysisRep
 	}
 	if report.PostingTimeInsight.BasedOnPosts >= 3 && report.PostingTimeInsight.BestTime != "" {
 		postingTimePrompt := fmt.Sprintf(`คุณคือ Linora AI ผู้ช่วยวิเคราะห์เพจ Facebook ตอบภาษาไทยแบบกระชับ
-ใช้เฉพาะข้อมูลนี้: วันโพสต์ที่ทำผลงานดีที่สุดคือ %s และช่วงเวลาที่มีปฏิสัมพันธ์เฉลี่ยสูงสุดคือ %s จาก %d โพสต์ล่าสุด
-เขียนคำแนะนำให้ผู้ดูแลเพจทดลองโพสต์ 1 ประโยค ห้ามแต่งตัวเลขหรืออ้างถึงข้อมูลอื่น`, report.PostingTimeInsight.BestDay, report.PostingTimeInsight.BestTime, report.PostingTimeInsight.BasedOnPosts)
+วิเคราะห์เฉพาะข้อมูลผลการโพสต์นี้: %s
+เขียน 2 ประโยคที่เป็นประโยชน์ต่อผู้ดูแลเพจ:
+1. ตีความแนวโน้มของวันและช่วงเวลาที่ทำผลงานดี โดยไม่คัดลอกข้อมูลดิบมาเรียงใหม่
+2. เสนอแผนทดลองโพสต์ครั้งถัดไปที่ทำได้จริง เช่น เปรียบเทียบรูปแบบเนื้อหาหรือคำกระตุ้นให้มีส่วนร่วม
+อาจกล่าวถึงวันหรือเวลาได้เพียงครั้งเดียวเมื่อช่วยให้ลงมือทำได้ ห้ามแต่งตัวเลข อ้างข้อมูลนอกเหนือจากนี้ หรือรับประกันผลลัพธ์`, mustJSON(report.PostingTimeInsight))
 		if answer, err := s.complete(ctx, postingTimePrompt); err == nil && answer != "" {
 			report.PostingTimeRecommendation = answer
 		}
