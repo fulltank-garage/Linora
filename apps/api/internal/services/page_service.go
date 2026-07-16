@@ -190,9 +190,11 @@ func (s *PageService) scheduleSync(ownerID string, pageID string) {
 // inside the API service so Railway needs no separate worker deployment.
 func (s *PageService) StartBackgroundWorker(ctx context.Context) {
 	if s.queue == nil {
+		log.Printf("analysis worker is using the in-process fallback because Redis is unavailable")
 		return
 	}
 	go func() {
+		log.Printf("Redis analysis worker started")
 		if err := s.queue.RecoverAnalysisJobs(ctx); err != nil {
 			log.Printf("recover queued analysis jobs: %v", err)
 		}

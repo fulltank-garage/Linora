@@ -45,10 +45,15 @@ type AnalysisJobQueue interface {
 }
 
 type RedisReportCache struct {
-	client *redis.Client
+	analysisQueuePrefix string
+	client              *redis.Client
 }
 
 func NewRedisReportCache(ctx context.Context, redisURL string) (*RedisReportCache, error) {
+	return newRedisReportCache(ctx, redisURL, "linora:analysis")
+}
+
+func newRedisReportCache(ctx context.Context, redisURL string, analysisQueuePrefix string) (*RedisReportCache, error) {
 	options, err := redis.ParseURL(redisURL)
 	if err != nil {
 		return nil, err
@@ -57,7 +62,7 @@ func NewRedisReportCache(ctx context.Context, redisURL string) (*RedisReportCach
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, err
 	}
-	return &RedisReportCache{client: client}, nil
+	return &RedisReportCache{analysisQueuePrefix: analysisQueuePrefix, client: client}, nil
 }
 
 func (c *RedisReportCache) Close() error {
@@ -120,19 +125,19 @@ func (c *RedisReportCache) EnqueueAnalysis(ctx context.Context, ownerID string, 
 	if err != nil {
 		return false, err
 	}
-	queued, err := c.client.SetNX(ctx, analysisJobLockKey(ownerID, pageID), "1", analysisJobLockTTL).Result()
+	queued, err := c.client.SetNX(ctx, c.analysisJobLockKey(ownerID, pageID), "1", analysisJobLockTTL).Result()
 	if err != nil || !queued {
 		return queued, err
 	}
-	if err := c.client.LPush(ctx, analysisJobQueueKey(), payload).Err(); err != nil {
-		_ = c.client.Del(ctx, analysisJobLockKey(ownerID, pageID)).Err()
+	if err := c.client.LPush(ctx, c.analysisJobQueueKey(), payload).Err(); err != nil {
+		_ = c.client.Del(ctx, c.analysisJobLockKey(ownerID, pageID)).Err()
 		return false, err
 	}
 	return true, nil
 }
 
 func (c *RedisReportCache) DequeueAnalysis(ctx context.Context) (AnalysisJob, bool, error) {
-	payload, err := c.client.BRPopLPush(ctx, analysisJobQueueKey(), analysisProcessingQueueKey(), 5*time.Second).Result()
+	payload, err := c.client.BRPopLPush(ctx, c.analysisJobQueueKey(), c.analysisProcessingQueueKey(), 5*time.Second).Result()
 	if err == redis.Nil {
 		return AnalysisJob{}, false, nil
 	}
@@ -141,7 +146,7 @@ func (c *RedisReportCache) DequeueAnalysis(ctx context.Context) (AnalysisJob, bo
 	}
 	var job AnalysisJob
 	if err := json.Unmarshal([]byte(payload), &job); err != nil {
-		_ = c.client.LRem(ctx, analysisProcessingQueueKey(), 1, payload).Err()
+		_ = c.client.LRem(ctx, c.analysisProcessingQueueKey(), 1, payload).Err()
 		return AnalysisJob{}, false, err
 	}
 	return job, true, nil
@@ -153,8 +158,8 @@ func (c *RedisReportCache) AcknowledgeAnalysis(ctx context.Context, job Analysis
 		return err
 	}
 	_, err = c.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-		pipe.LRem(ctx, analysisProcessingQueueKey(), 1, payload)
-		pipe.Del(ctx, analysisJobLockKey(job.OwnerID, job.PageID))
+		pipe.LRem(ctx, c.analysisProcessingQueueKey(), 1, payload)
+		pipe.Del(ctx, c.analysisJobLockKey(job.OwnerID, job.PageID))
 		return nil
 	})
 	return err
@@ -166,22 +171,22 @@ func (c *RedisReportCache) CancelAnalysis(ctx context.Context, ownerID string, p
 		return err
 	}
 	_, err = c.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-		pipe.LRem(ctx, analysisJobQueueKey(), 0, payload)
-		pipe.LRem(ctx, analysisProcessingQueueKey(), 0, payload)
-		pipe.Del(ctx, analysisJobLockKey(ownerID, pageID))
+		pipe.LRem(ctx, c.analysisJobQueueKey(), 0, payload)
+		pipe.LRem(ctx, c.analysisProcessingQueueKey(), 0, payload)
+		pipe.Del(ctx, c.analysisJobLockKey(ownerID, pageID))
 		return nil
 	})
 	return err
 }
 
 func (c *RedisReportCache) RecoverAnalysisJobs(ctx context.Context) error {
-	jobs, err := c.client.LRange(ctx, analysisProcessingQueueKey(), 0, -1).Result()
+	jobs, err := c.client.LRange(ctx, c.analysisProcessingQueueKey(), 0, -1).Result()
 	if err != nil || len(jobs) == 0 {
 		return err
 	}
 	_, err = c.client.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-		pipe.LPush(ctx, analysisJobQueueKey(), jobs)
-		pipe.Del(ctx, analysisProcessingQueueKey())
+		pipe.LPush(ctx, c.analysisJobQueueKey(), jobs)
+		pipe.Del(ctx, c.analysisProcessingQueueKey())
 		return nil
 	})
 	return err
@@ -213,16 +218,16 @@ func analysisStatusCacheKey(ownerID string, pageID string) string {
 	return fmt.Sprintf("linora:user:%s:page:%s:analysis-status", ownerID, pageID)
 }
 
-func analysisJobLockKey(ownerID string, pageID string) string {
-	return fmt.Sprintf("linora:user:%s:page:%s:analysis-job", ownerID, pageID)
+func (c *RedisReportCache) analysisJobLockKey(ownerID string, pageID string) string {
+	return fmt.Sprintf("%s:user:%s:page:%s:job", c.analysisQueuePrefix, ownerID, pageID)
 }
 
-func analysisJobQueueKey() string {
-	return "linora:analysis:queue"
+func (c *RedisReportCache) analysisJobQueueKey() string {
+	return c.analysisQueuePrefix + ":queue"
 }
 
-func analysisProcessingQueueKey() string {
-	return "linora:analysis:processing"
+func (c *RedisReportCache) analysisProcessingQueueKey() string {
+	return c.analysisQueuePrefix + ":processing"
 }
 
 func oauthStateKey(state string) string {
