@@ -167,7 +167,7 @@ export function PageSelectPage({
             startIcon={isAuthorizing ? <LoadingDots color="currentColor" size={7} /> : <ShieldOutlined />}
             variant="contained"
           >
-            {isAuthorizing ? "กำลังอัปเดตข้อมูลเพจ" : "อนุญาตและเข้าสู่หน้าวิเคราะห์"}
+            {isAuthorizing ? "กำลังเปิดหน้าวิเคราะห์" : "อนุญาตและเข้าสู่หน้าวิเคราะห์"}
           </Button>
         </Stack>
       </Box>
