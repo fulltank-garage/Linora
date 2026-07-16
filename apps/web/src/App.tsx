@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Box, Paper, Typography } from "@mui/material";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { MobileAppShell } from "@linora/ui";
-import type { AnalysisReport, FacebookPageSummary, WeeklyReport } from "@linora/shared";
+import type { AnalysisReport, AnalysisStatus, FacebookPageSummary, WeeklyReport } from "@linora/shared";
 import {
   activateConnectRichMenu,
   activateDashboardRichMenu,
@@ -47,11 +47,38 @@ function RouteLoading() {
   );
 }
 
+function DashboardAnalysisPending({ page, status }: { page: FacebookPageSummary; status: AnalysisStatus | null }) {
+  const isFailed = status?.state === "failed";
+  return (
+    <Box
+      sx={{
+        alignItems: "center",
+        display: "flex",
+        flexDirection: "column",
+        gap: 1.5,
+        justifyContent: "center",
+        minHeight: "calc(100dvh - 150px)",
+        px: 3,
+        textAlign: "center",
+      }}
+    >
+      <LoadingDots color={isFailed ? "error.main" : "primary.main"} />
+      <Typography sx={{ fontSize: 19, fontWeight: 900 }}>
+        {isFailed ? "ยังวิเคราะห์เพจไม่สำเร็จ" : "กำลังเตรียมรายงานของเพจ"}
+      </Typography>
+      <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
+        {isFailed ? `Linora จะลองอัปเดตข้อมูลของ ${page.pageName} อีกครั้งในไม่ช้า` : `กำลังอ่านข้อมูลล่าสุดของ ${page.pageName} เพื่อจัดทำรายงานให้คุณ`}
+      </Typography>
+    </Box>
+  );
+}
+
 function AppRoutes() {
   const location = useLocation();
   const navigate = useNavigate();
   const facebookHandoff = new URLSearchParams(location.search).get("facebook_connect");
   const [latestReport, setLatestReport] = useState<AnalysisReport | null>(null);
+  const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus | null>(null);
   const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null>(null);
   const [hasFacebookLogin, setHasFacebookLogin] = useState(false);
   const [facebookPages, setFacebookPages] = useState<FacebookPageSummary[]>([]);
@@ -63,14 +90,14 @@ function AppRoutes() {
   const [selectedPage, setSelectedPage] = useState<FacebookPageSummary | null>(null);
   const [hasPagePermission, setHasPagePermission] = useState(false);
 
-  const canViewDashboard =
-    hasFacebookLogin && selectedPage !== null && latestReport !== null && hasPagePermission;
+  const canViewDashboard = hasFacebookLogin && selectedPage !== null && hasPagePermission;
 
   function clearFacebookSession() {
     setHasFacebookLogin(false);
     setFacebookPages([]);
     setFacebookHandoffCode(null);
     setLatestReport(null);
+    setAnalysisStatus(null);
     setWeeklyReport(null);
     setSelectedPage(null);
     setHasPagePermission(false);
@@ -87,7 +114,8 @@ function AppRoutes() {
         setHasFacebookLogin(pages.length > 0);
         if (dashboard) {
           setSelectedPage(dashboard.page);
-          setLatestReport(dashboard.report);
+          setLatestReport(dashboard.report ?? null);
+          setAnalysisStatus(dashboard.analysisStatus);
           setWeeklyReport(dashboard.weeklyReport);
           setHasPagePermission(true);
         }
@@ -102,6 +130,28 @@ function AppRoutes() {
       isActive = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isLineIdentityReady || !selectedPage || !hasPagePermission || analysisStatus?.state === "ready") return;
+    let isActive = true;
+    const refreshDashboard = async () => {
+      try {
+        const dashboard = await getSavedFacebookDashboard();
+        if (!isActive || !dashboard) return;
+        setLatestReport(dashboard.report ?? null);
+        setAnalysisStatus(dashboard.analysisStatus);
+        setWeeklyReport(dashboard.weeklyReport);
+      } catch {
+        // Keep the most recent report on screen while the background job retries.
+      }
+    };
+    void refreshDashboard();
+    const interval = window.setInterval(() => void refreshDashboard(), 2500);
+    return () => {
+      isActive = false;
+      window.clearInterval(interval);
+    };
+  }, [analysisStatus?.state, hasPagePermission, isLineIdentityReady, selectedPage]);
 
   useEffect(() => {
 	if (!isLineIdentityReady) return;
@@ -155,7 +205,8 @@ function AppRoutes() {
       ? await connectFacebookPage(facebookHandoffCode, selectedPage.pageId)
       : await selectConnectedFacebookPage(selectedPage.pageId);
     setSelectedPage(result.page);
-    setLatestReport(result.report);
+    setLatestReport(result.report ?? null);
+    setAnalysisStatus(result.analysisStatus);
     setWeeklyReport(await getWeeklyFacebookReport(result.page.pageId));
     setHasPagePermission(true);
     setFacebookHandoffCode(null);
@@ -237,14 +288,19 @@ function AppRoutes() {
           />
           <Route
             element={
-              canViewDashboard && selectedPage && latestReport ? (
-                <DashboardPage
-                  onDeleteData={deleteSelectedPageData}
-                  onDisconnect={disconnectSelectedPage}
-                  page={selectedPage}
-                  report={latestReport}
-                  weeklyReport={weeklyReport}
-                />
+              canViewDashboard && selectedPage ? (
+                latestReport ? (
+                  <DashboardPage
+                    analysisStatus={analysisStatus}
+                    onDeleteData={deleteSelectedPageData}
+                    onDisconnect={disconnectSelectedPage}
+                    page={selectedPage}
+                    report={latestReport}
+                    weeklyReport={weeklyReport}
+                  />
+                ) : (
+                  <DashboardAnalysisPending page={selectedPage} status={analysisStatus} />
+                )
               ) : (
                 <Navigate replace to={hasFacebookLogin ? "/pages" : "/connect-facebook"} />
               )

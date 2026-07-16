@@ -34,7 +34,13 @@ type PageSnapshot struct {
 	Posts    []FacebookPost     `json:"posts"`
 }
 
+type AnalysisStatus struct {
+	State     string `json:"state"`
+	UpdatedAt string `json:"updatedAt"`
+}
+
 type ConnectedPageResponse struct {
-	Page   FacebookPage   `json:"page"`
-	Report AnalysisReport `json:"report"`
+	AnalysisStatus AnalysisStatus  `json:"analysisStatus"`
+	Page           FacebookPage    `json:"page"`
+	Report         *AnalysisReport `json:"report,omitempty"`
 }

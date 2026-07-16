@@ -54,10 +54,16 @@ export type WeeklyReport = {
   metrics: PageMetrics;
 };
 
+export type AnalysisStatus = {
+  state: "queued" | "running" | "refreshing" | "ready" | "failed";
+  updatedAt: string;
+};
+
 export type AnalysisReport = {
   id: string;
   pageName: string;
   summary: string;
+  sourceFingerprint?: string;
   healthScore: number;
   topPosts: TopPost[];
   importantComments: ImportantComment[];

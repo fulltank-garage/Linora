@@ -17,10 +17,12 @@ import {
 } from "@mui/icons-material";
 import { CountUp } from "../components/CountUp";
 import { useNavigate } from "react-router-dom";
-import type { AnalysisReport, FacebookPageSummary, WeeklyReport } from "@linora/shared";
+import type { AnalysisReport, AnalysisStatus, FacebookPageSummary, WeeklyReport } from "@linora/shared";
+import { LoadingDots } from "../components/LoadingDots";
 import { ComplianceLinks } from "../components/ComplianceLinks";
 
 type DashboardPageProps = {
+	analysisStatus: AnalysisStatus | null;
   onDeleteData: () => Promise<void>;
   onDisconnect: () => Promise<void>;
   page: FacebookPageSummary;
@@ -88,7 +90,7 @@ function getContentGuidanceSections(recommendation: string) {
     });
 }
 
-export function DashboardPage({ onDeleteData, onDisconnect, page, report, weeklyReport }: DashboardPageProps) {
+export function DashboardPage({ analysisStatus, onDeleteData, onDisconnect, page, report, weeklyReport }: DashboardPageProps) {
   const navigate = useNavigate();
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [managementAction, setManagementAction] = useState<"delete" | "disconnect" | null>(null);
@@ -223,6 +225,24 @@ export function DashboardPage({ onDeleteData, onDisconnect, page, report, weekly
               <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: 1.55 }}>
                 {`กำลังวิเคราะห์เพจหมวด ${page.category}`}
               </Typography>
+              {analysisStatus && analysisStatus.state !== "ready" ? (
+                <Box
+                  sx={{
+                    alignItems: "center",
+                    bgcolor: "rgba(0, 143, 110, 0.08)",
+                    borderRadius: 2,
+                    display: "flex",
+                    gap: 1,
+                    px: 1.5,
+                    py: 1,
+                  }}
+                >
+                  <LoadingDots color="primary.main" size={6} />
+                  <Typography color="text.secondary" sx={{ fontSize: 12, fontWeight: 700, lineHeight: 1.4 }}>
+                    {analysisStatus.state === "refreshing" ? "กำลังตรวจข้อมูลล่าสุดของเพจ รายงานเดิมยังใช้งานได้" : "กำลังจัดทำรายงานล่าสุดของเพจ"}
+                  </Typography>
+                </Box>
+              ) : null}
               <Box
                 sx={{
                   alignItems: "center",

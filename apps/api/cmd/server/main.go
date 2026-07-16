@@ -47,6 +47,7 @@ func main() {
 	}
 	aiService := services.NewAIService(cfg.AI)
 	pageService := services.NewPageService(store, reportCache, cipher, facebookService, analysisService, aiService)
+	pageService.StartBackgroundWorker(ctx)
 	lineService := services.NewLineService(store, aiService, cfg.Line)
 	lineIdentityService := services.NewLineIdentityService(cfg.Line)
 	router := routes.NewRouter(

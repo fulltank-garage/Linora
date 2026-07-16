@@ -41,11 +41,12 @@ type AnalysisReport struct {
 	ID                        string             `json:"id"`
 	PageName                  string             `json:"pageName"`
 	Summary                   string             `json:"summary"`
+	SourceFingerprint         string             `json:"sourceFingerprint,omitempty"`
 	HealthScore               int                `json:"healthScore"`
 	TopPosts                  []TopPost          `json:"topPosts"`
 	ImportantComments         []ImportantComment `json:"importantComments"`
 	ContentRecommendations    []string           `json:"contentRecommendations"`
-	AIContentRecommendation  string             `json:"aiContentRecommendation"`
+	AIContentRecommendation   string             `json:"aiContentRecommendation"`
 	BestPostingTimes          []string           `json:"bestPostingTimes"`
 	PostingTimeInsight        PostingTimeInsight `json:"postingTimeInsight"`
 	PostingTimeRecommendation string             `json:"postingTimeRecommendation"`

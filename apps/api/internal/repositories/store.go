@@ -40,6 +40,7 @@ type Store interface {
 	Migrate(context.Context) error
 	SaveMetrics(context.Context, string, string, models.PageMetrics) error
 	SaveReport(context.Context, string, string, models.AnalysisReport) error
+	TouchReport(context.Context, string, string, models.AnalysisReport) error
 	UpsertConnection(context.Context, PageConnection) error
 	UseLinkCode(context.Context, string, string) (string, error)
 }
@@ -311,6 +312,19 @@ func (s *PostgresStore) SaveReport(ctx context.Context, ownerID string, pageID s
 		return err
 	}
 	_, err = s.pool.Exec(ctx, `INSERT INTO analysis_reports (id, owner_id, page_id, payload) VALUES ($1, $2, $3, $4)`, report.ID, ownerID, pageID, payload)
+	return err
+}
+
+func (s *PostgresStore) TouchReport(ctx context.Context, ownerID string, pageID string, report models.AnalysisReport) error {
+	payload, err := json.Marshal(report)
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, `
+		UPDATE analysis_reports
+		SET payload = $4, created_at = now()
+		WHERE id = $1 AND owner_id = $2 AND page_id = $3
+	`, report.ID, ownerID, pageID, payload)
 	return err
 }
 
