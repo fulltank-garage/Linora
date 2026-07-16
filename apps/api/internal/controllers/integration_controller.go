@@ -16,13 +16,14 @@ import (
 )
 
 type IntegrationController struct {
-	line       *services.LineService
-	lineSecret string
-	page       *services.PageService
+	line             *services.LineService
+	lineSecret       string
+	page             *services.PageService
+	webhookRateLimit *middleware.RateLimiter
 }
 
-func NewIntegrationController(page *services.PageService, line *services.LineService, lineSecret string) *IntegrationController {
-	return &IntegrationController{line: line, lineSecret: lineSecret, page: page}
+func NewIntegrationController(page *services.PageService, line *services.LineService, lineSecret string, webhookRateLimit *middleware.RateLimiter) *IntegrationController {
+	return &IntegrationController{line: line, lineSecret: lineSecret, page: page, webhookRateLimit: webhookRateLimit}
 }
 
 func (c *IntegrationController) ConnectPage(ctx *gin.Context) {
@@ -214,6 +215,11 @@ func (c *IntegrationController) LineWebhook(ctx *gin.Context) {
 	for _, event := range payload.Events {
 		if event.Message.Type != "text" || event.Source.UserID == "" {
 			continue
+		}
+		if c.webhookRateLimit != nil {
+			if allowed, _ := c.webhookRateLimit.Allow(event.Source.UserID); !allowed {
+				continue
+			}
 		}
 		text := strings.TrimSpace(event.Message.Text)
 		go c.replyToLineMessage(event.ReplyToken, event.Source.UserID, text)

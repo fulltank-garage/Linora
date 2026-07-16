@@ -12,6 +12,8 @@ import (
 
 const reportCacheTTL = 15 * time.Minute
 
+const oauthStateTTL = 5 * time.Minute
+
 type ReportCache interface {
 	Delete(context.Context, string, string) error
 	Get(context.Context, string, string) (models.AnalysisReport, bool, error)
@@ -65,6 +67,28 @@ func (c *RedisReportCache) Set(ctx context.Context, ownerID string, pageID strin
 	return c.client.Set(ctx, reportCacheKey(ownerID, pageID), payload, reportCacheTTL).Err()
 }
 
+// SaveOAuthState stores the one-time Facebook OAuth state outside the API
+// process so an application restart does not invalidate an in-progress login.
+func (c *RedisReportCache) SaveOAuthState(ctx context.Context, state string, ownerID string) error {
+	return c.client.Set(ctx, oauthStateKey(state), ownerID, oauthStateTTL).Err()
+}
+
+// ConsumeOAuthState returns and removes a one-time Facebook OAuth state.
+func (c *RedisReportCache) ConsumeOAuthState(ctx context.Context, state string) (string, bool, error) {
+	ownerID, err := c.client.GetDel(ctx, oauthStateKey(state)).Result()
+	if err == redis.Nil {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return ownerID, true, nil
+}
+
 func reportCacheKey(ownerID string, pageID string) string {
 	return fmt.Sprintf("linora:user:%s:page:%s:latest-report", ownerID, pageID)
+}
+
+func oauthStateKey(state string) string {
+	return "linora:facebook:oauth-state:" + state
 }

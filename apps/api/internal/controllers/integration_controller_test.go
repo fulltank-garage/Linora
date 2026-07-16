@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/fulltank-garage/linora/apps/api/internal/config"
+	"github.com/fulltank-garage/linora/apps/api/internal/middleware"
 	"github.com/fulltank-garage/linora/apps/api/internal/services"
 	"github.com/gin-gonic/gin"
 )
@@ -18,7 +20,7 @@ func TestLineWebhookAcceptsVerifiedPayload(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	secret := "line-webhook-secret"
 	line := services.NewLineService(nil, nil, config.LineConfig{})
-	controller := NewIntegrationController(nil, line, secret)
+	controller := NewIntegrationController(nil, line, secret, middleware.NewRateLimiter(30, time.Minute))
 	router := gin.New()
 	router.POST("/webhook", controller.LineWebhook)
 

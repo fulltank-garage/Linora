@@ -24,7 +24,7 @@ func (c *FacebookController) Begin(cxt *gin.Context) {
 		return
 	}
 
-	authorizationURL, err := c.service.StartAuthorization(middleware.LineUserID(cxt))
+	authorizationURL, err := c.service.StartAuthorization(cxt.Request.Context(), middleware.LineUserID(cxt))
 	if err != nil {
 		cxt.JSON(http.StatusInternalServerError, gin.H{"error": "ไม่สามารถเริ่ม Facebook Login ได้"})
 		return
@@ -38,7 +38,7 @@ func (c *FacebookController) Callback(cxt *gin.Context) {
 		return
 	}
 
-	ownerID, err := c.service.ConsumeAuthorizationState(cxt.Query("state"))
+	ownerID, err := c.service.ConsumeAuthorizationState(cxt.Request.Context(), cxt.Query("state"))
 	if err != nil || ownerID == "" {
 		c.redirectWithError(cxt, "ไม่สามารถยืนยัน Facebook Login ได้")
 		return

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/fulltank-garage/linora/apps/api/internal/config"
 	"github.com/fulltank-garage/linora/apps/api/internal/controllers"
@@ -10,15 +11,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	apiRequestsPerMinute         = 120
+	lineMessagesPerUserPerMinute = 30
+)
+
 func NewRouter(cfg config.Config, analysisService *services.AnalysisService, facebookService *services.FacebookService, pageService *services.PageService, lineService *services.LineService, lineIdentity *services.LineIdentityService) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Recovery(), middleware.CORS(cfg.Facebook.AppURL))
+	router.Use(middleware.RateLimit(apiRequestsPerMinute, time.Minute))
 
 	facebookController := controllers.NewFacebookController(facebookService, pageService)
 	requireLineIdentity := middleware.RequireLineIdentity(lineIdentity, cfg.Environment)
 	if pageService != nil && lineService != nil {
-		integrationController := controllers.NewIntegrationController(pageService, lineService, cfg.Line.ChannelSecret)
+		integrationController := controllers.NewIntegrationController(pageService, lineService, cfg.Line.ChannelSecret, middleware.NewRateLimiter(lineMessagesPerUserPerMinute, time.Minute))
 		facebook := router.Group("/api/facebook", requireLineIdentity)
 		facebook.POST("/connections", integrationController.ConnectPage)
 		facebook.GET("/dashboard", integrationController.Dashboard)

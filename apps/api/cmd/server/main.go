@@ -26,6 +26,7 @@ func main() {
 		log.Fatal("migrate PostgreSQL: ", err)
 	}
 	var reportCache repositories.ReportCache
+	var oauthStateStore services.OAuthStateStore
 	if strings.TrimSpace(cfg.RedisURL) != "" {
 		cache, err := repositories.NewRedisReportCache(ctx, cfg.RedisURL)
 		if err != nil {
@@ -33,6 +34,7 @@ func main() {
 		}
 		defer cache.Close()
 		reportCache = cache
+		oauthStateStore = cache
 	}
 	cipher, err := services.NewTokenCipher(cfg.EncryptionKey)
 	if err != nil {
@@ -40,6 +42,9 @@ func main() {
 	}
 	analysisService := services.NewAnalysisService()
 	facebookService := services.NewFacebookService(cfg.Facebook)
+	if oauthStateStore != nil {
+		facebookService.UseOAuthStateStore(oauthStateStore)
+	}
 	aiService := services.NewAIService(cfg.AI)
 	pageService := services.NewPageService(store, reportCache, cipher, facebookService, analysisService, aiService)
 	lineService := services.NewLineService(store, aiService, cfg.Line)

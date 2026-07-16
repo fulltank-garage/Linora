@@ -82,7 +82,36 @@ func Load() (Config, error) {
 	if err := cfg.AI.Validate(); err != nil {
 		return Config{}, err
 	}
+	if err := cfg.Facebook.Validate(); err != nil {
+		return Config{}, err
+	}
 	return cfg, nil
+}
+
+func (c FacebookConfig) Validate() error {
+	missing := make([]string, 0, 6)
+	if strings.TrimSpace(c.AppID) == "" {
+		missing = append(missing, "FACEBOOK_APP_ID")
+	}
+	if strings.TrimSpace(c.AppSecret) == "" {
+		missing = append(missing, "FACEBOOK_APP_SECRET")
+	}
+	if strings.TrimSpace(c.AppURL) == "" {
+		missing = append(missing, "APP_URL")
+	}
+	if strings.TrimSpace(c.GraphVersion) == "" {
+		missing = append(missing, "FACEBOOK_GRAPH_VERSION")
+	}
+	if strings.TrimSpace(c.RedirectURI) == "" {
+		missing = append(missing, "FACEBOOK_REDIRECT_URI")
+	}
+	if len(c.Scopes) == 0 {
+		missing = append(missing, "FACEBOOK_SCOPES")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required Facebook environment variables: %s", strings.Join(missing, ", "))
+	}
+	return nil
 }
 
 func (c AIConfig) Validate() error {
@@ -113,7 +142,7 @@ func (c AIConfig) Validate() error {
 
 func splitScopes(raw string) []string {
 	if strings.TrimSpace(raw) == "" {
-		return []string{"pages_show_list", "pages_read_engagement", "pages_read_user_content", "read_insights"}
+		return nil
 	}
 	parts := strings.Split(raw, ",")
 	values := make([]string, 0, len(parts))

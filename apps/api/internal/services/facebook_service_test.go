@@ -16,6 +16,21 @@ import (
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
+type testOAuthStateStore struct {
+	values map[string]string
+}
+
+func (s *testOAuthStateStore) ConsumeOAuthState(_ context.Context, state string) (string, bool, error) {
+	ownerID, found := s.values[state]
+	delete(s.values, state)
+	return ownerID, found, nil
+}
+
+func (s *testOAuthStateStore) SaveOAuthState(_ context.Context, state string, ownerID string) error {
+	s.values[state] = ownerID
+	return nil
+}
+
 func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
 	return f(request)
 }
@@ -27,6 +42,7 @@ func TestAuthorizationURLContainsOAuthParameters(t *testing.T) {
 		AppURL:       "https://linora.example",
 		GraphVersion: "v24.0",
 		RedirectURI:  "https://api.linora.example/api/facebook/callback",
+		Scopes:       []string{"pages_show_list", "pages_read_engagement", "pages_read_user_content", "read_insights"},
 	})
 
 	parsed, err := url.Parse(service.AuthorizationURL("state-token"))
@@ -59,6 +75,7 @@ func TestCompleteLoginExchangesCodeAndConsumesSelectedPageOnce(t *testing.T) {
 		AppURL:       "https://linora.example",
 		GraphVersion: "v24.0",
 		RedirectURI:  "https://api.linora.example/api/facebook/callback",
+		Scopes:       []string{"pages_show_list", "pages_read_engagement", "pages_read_user_content", "read_insights"},
 	})
 	service.http = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		body := ""
@@ -108,6 +125,35 @@ func TestCompleteLoginExchangesCodeAndConsumesSelectedPageOnce(t *testing.T) {
 	}
 	if _, err := service.ConsumePage(handoff, "line-user-1", "page-1"); err == nil {
 		t.Fatal("ConsumePage accepted a handoff code twice")
+	}
+}
+
+func TestAuthorizationStateUsesPersistentStoreOnce(t *testing.T) {
+	service := NewFacebookService(config.FacebookConfig{
+		AppID:        "app-id",
+		AppSecret:    "app-secret",
+		AppURL:       "https://linora.example",
+		GraphVersion: "v24.0",
+		RedirectURI:  "https://api.linora.example/api/facebook/callback",
+		Scopes:       []string{"pages_show_list"},
+	})
+	service.UseOAuthStateStore(&testOAuthStateStore{values: make(map[string]string)})
+
+	authorizationURL, err := service.StartAuthorization(context.Background(), "line-user-1")
+	if err != nil {
+		t.Fatalf("StartAuthorization returned error: %v", err)
+	}
+	parsed, err := url.Parse(authorizationURL)
+	if err != nil {
+		t.Fatalf("invalid authorization URL: %v", err)
+	}
+	state := parsed.Query().Get("state")
+	ownerID, err := service.ConsumeAuthorizationState(context.Background(), state)
+	if err != nil || ownerID != "line-user-1" {
+		t.Fatalf("ConsumeAuthorizationState = %q, %v", ownerID, err)
+	}
+	if _, err := service.ConsumeAuthorizationState(context.Background(), state); err == nil {
+		t.Fatal("persistent OAuth state was accepted twice")
 	}
 }
 

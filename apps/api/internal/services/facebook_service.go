@@ -33,6 +33,11 @@ type facebookOAuthState struct {
 	OwnerID   string
 }
 
+type OAuthStateStore interface {
+	ConsumeOAuthState(context.Context, string) (string, bool, error)
+	SaveOAuthState(context.Context, string, string) error
+}
+
 type FacebookAPIError struct {
 	Code       int
 	Message    string
@@ -49,20 +54,15 @@ func IsFacebookAccessTokenError(err error) bool {
 }
 
 type FacebookService struct {
-	config   config.FacebookConfig
-	handoffs map[string]facebookHandoff
-	oauth    map[string]facebookOAuthState
-	http     *http.Client
-	mu       sync.Mutex
+	config     config.FacebookConfig
+	handoffs   map[string]facebookHandoff
+	oauth      map[string]facebookOAuthState
+	oauthStore OAuthStateStore
+	http       *http.Client
+	mu         sync.Mutex
 }
 
 func NewFacebookService(cfg config.FacebookConfig) *FacebookService {
-	if cfg.GraphVersion == "" {
-		cfg.GraphVersion = "v24.0"
-	}
-	if len(cfg.Scopes) == 0 {
-		cfg.Scopes = []string{"pages_show_list", "pages_read_engagement", "pages_read_user_content", "read_insights"}
-	}
 	return &FacebookService{
 		config:   cfg,
 		handoffs: make(map[string]facebookHandoff),
@@ -71,8 +71,12 @@ func NewFacebookService(cfg config.FacebookConfig) *FacebookService {
 	}
 }
 
+func (s *FacebookService) UseOAuthStateStore(store OAuthStateStore) {
+	s.oauthStore = store
+}
+
 func (s *FacebookService) Configured() bool {
-	return s.config.AppID != "" && s.config.AppSecret != "" && s.config.AppURL != "" && s.config.RedirectURI != ""
+	return s.config.Validate() == nil
 }
 
 func (s *FacebookService) AppURL() string {
@@ -95,10 +99,16 @@ func (s *FacebookService) AuthorizationURL(state string) string {
 	return authorizeURL.String()
 }
 
-func (s *FacebookService) StartAuthorization(ownerID string) (string, error) {
+func (s *FacebookService) StartAuthorization(ctx context.Context, ownerID string) (string, error) {
 	state, err := SecureToken()
 	if err != nil {
 		return "", err
+	}
+	if s.oauthStore != nil {
+		if err := s.oauthStore.SaveOAuthState(ctx, state, ownerID); err != nil {
+			return "", err
+		}
+		return s.AuthorizationURL(state), nil
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -112,7 +122,17 @@ func (s *FacebookService) StartAuthorization(ownerID string) (string, error) {
 	return s.AuthorizationURL(state), nil
 }
 
-func (s *FacebookService) ConsumeAuthorizationState(state string) (string, error) {
+func (s *FacebookService) ConsumeAuthorizationState(ctx context.Context, state string) (string, error) {
+	if s.oauthStore != nil {
+		ownerID, found, err := s.oauthStore.ConsumeOAuthState(ctx, state)
+		if err != nil {
+			return "", err
+		}
+		if !found {
+			return "", errors.New("Facebook Login session expired")
+		}
+		return ownerID, nil
+	}
 	s.mu.Lock()
 	entry, ok := s.oauth[state]
 	if ok {
