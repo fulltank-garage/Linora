@@ -1,13 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Box, Paper, Typography } from "@mui/material";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { MobileAppShell } from "@linora/ui";
 import type { AnalysisReport, FacebookPageSummary, WeeklyReport } from "@linora/shared";
-import { AnalyzingPage } from "./pages/AnalyzingPage";
-import { ConnectFacebookPage } from "./pages/ConnectFacebookPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { LegalPage } from "./pages/LegalPage";
-import { PageSelectPage } from "./pages/PageSelectPage";
 import {
   activateConnectRichMenu,
   activateDashboardRichMenu,
@@ -25,6 +20,32 @@ import { LoadingDots } from "./components/LoadingDots";
 import { initializeLineIdentity } from "./lib/line";
 
 const facebookTransitionDelay = 650;
+const AnalyzingPage = lazy(async () => ({ default: (await import("./pages/AnalyzingPage")).AnalyzingPage }));
+const ConnectFacebookPage = lazy(async () => ({ default: (await import("./pages/ConnectFacebookPage")).ConnectFacebookPage }));
+const DashboardPage = lazy(async () => ({ default: (await import("./pages/DashboardPage")).DashboardPage }));
+const LegalPage = lazy(async () => ({ default: (await import("./pages/LegalPage")).LegalPage }));
+const PageSelectPage = lazy(async () => ({ default: (await import("./pages/PageSelectPage")).PageSelectPage }));
+
+function RouteLoading() {
+  return (
+    <Box
+      sx={{
+        alignItems: "center",
+        display: "flex",
+        flexDirection: "column",
+        gap: 1.5,
+        justifyContent: "center",
+        minHeight: "calc(100dvh - 150px)",
+        textAlign: "center",
+      }}
+    >
+      <LoadingDots />
+      <Typography color="text.secondary" sx={{ fontSize: 14 }}>
+        กำลังเปิดหน้าให้คุณ
+      </Typography>
+    </Box>
+  );
+}
 
 function AppRoutes() {
   const location = useLocation();
@@ -206,7 +227,8 @@ function AppRoutes() {
   return (
     <MobileAppShell>
       <Box component={Paper} elevation={0} sx={{ bgcolor: "transparent" }}>
-        <Routes>
+        <Suspense fallback={<RouteLoading />}>
+          <Routes>
           <Route
             element={
               <Navigate replace to={canViewDashboard ? "/dashboard" : "/connect-facebook"} />
@@ -259,7 +281,8 @@ function AppRoutes() {
             path="/pages"
           />
           <Route element={<AnalyzingPage />} path="/analyzing" />
-        </Routes>
+          </Routes>
+        </Suspense>
       </Box>
     </MobileAppShell>
   );
@@ -268,7 +291,9 @@ function AppRoutes() {
 function PublicLegalPage({ type }: { type: "privacy" | "terms" | "data-deletion" }) {
   return (
     <MobileAppShell>
-      <LegalPage type={type} />
+      <Suspense fallback={<RouteLoading />}>
+        <LegalPage type={type} />
+      </Suspense>
     </MobileAppShell>
   );
 }
