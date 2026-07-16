@@ -50,6 +50,7 @@ func NewRouter(cfg config.Config, analysisService *services.AnalysisService, fac
 	router.POST("/api/facebook/login", requireLineIdentity, facebookController.Begin)
 	router.GET("/api/facebook/callback", facebookController.Callback)
 	router.GET("/api/facebook/session", requireLineIdentity, facebookController.Session)
+	router.POST("/api/facebook/deauthorize", facebookController.Deauthorize)
 	router.POST("/api/facebook/data-deletion", facebookController.DataDeletion)
 
 	return router

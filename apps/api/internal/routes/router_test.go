@@ -31,3 +31,11 @@ func TestFacebookLoginRequiresConfiguration(t *testing.T) {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusServiceUnavailable)
 	}
 }
+
+func TestFacebookDeauthorizeRouteIsPublic(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	newTestRouter().ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/facebook/deauthorize", nil))
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusServiceUnavailable)
+	}
+}

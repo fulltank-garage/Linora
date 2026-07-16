@@ -111,6 +111,26 @@ func (c *FacebookController) DataDeletion(cxt *gin.Context) {
 	cxt.JSON(http.StatusOK, gin.H{"url": statusURL.String(), "confirmation_code": confirmationCode})
 }
 
+// Deauthorize receives Meta's signed callback when a person removes Linora
+// from their Facebook settings. The same connected data must no longer remain
+// available to the application after that event.
+func (c *FacebookController) Deauthorize(cxt *gin.Context) {
+	if c.page == nil {
+		cxt.JSON(http.StatusServiceUnavailable, gin.H{"error": "deauthorization is unavailable"})
+		return
+	}
+	facebookUserID, err := c.service.VerifyDataDeletionRequest(cxt.PostForm("signed_request"))
+	if err != nil {
+		cxt.JSON(http.StatusBadRequest, gin.H{"error": "invalid deauthorization request"})
+		return
+	}
+	if err := c.page.DeleteFacebookUserData(cxt.Request.Context(), facebookUserID); err != nil {
+		cxt.JSON(http.StatusInternalServerError, gin.H{"error": "could not revoke Facebook access"})
+		return
+	}
+	cxt.Status(http.StatusOK)
+}
+
 func (c *FacebookController) redirectWithError(cxt *gin.Context, message string) {
 	redirectURL, err := url.Parse(c.service.AppURL())
 	if err != nil {
